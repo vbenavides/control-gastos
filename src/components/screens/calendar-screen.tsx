@@ -31,8 +31,8 @@ export function CalendarScreen() {
         </div>
 
         <div className="mt-5 grid grid-cols-7 gap-y-4 text-center">
-          {weekdayLabels.map((label) => (
-            <span key={label} className="text-sm text-[var(--text-tertiary)]">
+          {weekdayLabels.map((label, index) => (
+            <span key={`${label}-${index}`} className="text-sm text-[var(--text-tertiary)]">
               {label}
             </span>
           ))}

@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-4 pt-4 md:max-w-[920px] md:px-6 lg:max-w-[1180px] lg:px-8 xl:mx-0 xl:max-w-none xl:flex-1 xl:px-6 xl:pb-6 xl:pt-4">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-0 pt-4 md:max-w-[920px] md:px-6 lg:max-w-[1180px] lg:px-8 xl:mx-0 xl:max-w-none xl:flex-1 xl:px-6 xl:pb-6 xl:pt-4">
         <header className="mb-4 flex items-center justify-between xl:justify-end">
           <div className="h-10 w-10 xl:hidden" aria-hidden="true" />
           <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="w-full xl:px-2">{children}</div>
         </main>
 
-        <nav className="sticky bottom-0 z-20 -mx-4 mt-3 border-t border-white/5 bg-[rgba(7,16,25,0.92)] px-5 pb-6 pt-3 backdrop-blur-xl xl:hidden">
+        <nav className="sticky bottom-0 z-20 -mx-4 mt-3 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 xl:hidden">
           <ul className="grid grid-cols-5 items-center gap-2">
             {navigationItems.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
@@ -151,12 +151,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Link
                     href={href}
                     aria-label={label}
-                    className="flex min-h-12 items-center justify-center rounded-2xl py-2 text-xs text-[var(--text-secondary)] transition"
+                    className="flex h-11 items-center justify-center rounded-2xl py-1 text-xs text-[var(--text-secondary)] transition"
                   >
                     <Icon
-                      size={23}
+                      size={22}
                       strokeWidth={2.1}
-                      className={isActive ? "text-[var(--accent)]" : "text-white/70"}
+                      className={isActive ? "text-[var(--accent)]" : "text-white/68"}
                       fill={href === "/categorias" && isActive ? "currentColor" : "none"}
                     />
                     <span className="sr-only">{label}</span>
@@ -168,14 +168,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </div>
 
-      <div className="fixed bottom-24 right-5 z-30 md:right-8 lg:right-10 xl:bottom-5 xl:right-6">
+      <div className="fixed bottom-20 right-4 z-30 md:right-6 lg:right-8 xl:bottom-5 xl:right-6">
         <button
           type="button"
           aria-label="Agregar nueva acción"
           onClick={() => setIsFabOpen(true)}
-          className="accent-ring grid h-16 w-16 place-items-center rounded-3xl bg-[var(--accent)] text-white shadow-[0_18px_40px_rgba(41,187,243,0.38)] transition hover:scale-[1.02]"
+          className="accent-ring grid h-[3.75rem] w-[3.75rem] place-items-center rounded-[1.15rem] bg-[var(--accent)] text-white shadow-[0_14px_30px_rgba(41,187,243,0.3)] transition hover:scale-[1.02]"
         >
-          <Plus size={28} strokeWidth={2.2} />
+          <Plus size={26} strokeWidth={2.2} />
         </button>
       </div>
 

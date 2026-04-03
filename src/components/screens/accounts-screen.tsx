@@ -1,60 +1,76 @@
-import { CreditCard, Wallet } from "lucide-react";
+import { Banknote, CreditCard } from "lucide-react";
 import { accountGroups, accountTabs } from "@/lib/mock-data";
-import { Segmented, SurfaceCard } from "@/components/ui-kit";
 
 export function AccountsScreen() {
   return (
-    <div className="mx-auto w-full max-w-[1080px] space-y-7 pt-7">
-      <h1 className="text-[2rem] font-medium tracking-[-0.04em] md:text-[2.35rem]">Cuentas</h1>
+    <div className="mx-auto w-full max-w-[540px] pt-5 md:max-w-[920px] lg:max-w-[1080px]">
+      <h1 className="text-[1.92rem] font-medium tracking-[-0.055em] text-[var(--text-primary)]">Cuentas</h1>
 
-      <div>
-        <Segmented items={accountTabs} className="bg-transparent p-0" activeIndex={0} />
-        <div className="mt-2 h-[2px] bg-white/6">
-          <div className="h-full w-1/3 rounded-full bg-[var(--accent)]" />
+      <div className="mt-8 border-b border-white/6">
+        <div className="grid grid-cols-2 items-end text-center">
+          {accountTabs.map((tab, index) => {
+            const isActive = index === 0;
+
+            return (
+              <div
+                key={tab}
+                className={`relative px-3 pb-3.5 text-[1rem] font-medium ${
+                  isActive ? "text-[var(--accent)]" : "text-white/80"
+                }`}
+              >
+                <span>{tab}</span>
+                {isActive ? <span className="absolute inset-x-0 bottom-0 mx-auto h-[3px] w-[136px] bg-[var(--accent)]" /> : null}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+      <div className="mt-7 space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
         {accountGroups.map((group, index) => {
-          const Icon = index === 0 ? CreditCard : Wallet;
+          const Icon = index === 0 ? CreditCard : Banknote;
+
           return (
-            <SurfaceCard key={group.title} className="overflow-hidden">
-              <div className="flex items-center justify-between gap-3 bg-black/50 px-4 py-4">
+            <div
+              key={group.title}
+              className="overflow-hidden rounded-[0.95rem] border border-white/[0.07] bg-[#17212b]"
+            >
+              <div className="flex items-center justify-between gap-3 bg-[#04080c] px-4 py-[0.9rem]">
                 <div className="flex items-center gap-3">
-                  <Icon size={18} className="text-white/90" />
-                  <p className="text-xl font-medium">{group.title}</p>
+                  <Icon size={18} strokeWidth={2.1} className="text-white/90" />
+                  <p className="text-[1rem] font-medium text-white">{group.title}</p>
                 </div>
-                <p className="text-xl font-semibold">{group.total}</p>
+                <p className="text-[1rem] font-semibold text-white">{group.total}</p>
               </div>
 
-              <div>
+              <div className="bg-[#17212b]">
                 {group.items.map((item, itemIndex) => (
                   <div
                     key={item.name}
-                    className={`flex items-center justify-between px-4 py-5 text-lg ${
+                    className={`flex items-center justify-between px-4 py-4 ${
                       itemIndex > 0 ? "border-t border-[var(--line)]" : ""
                     }`}
                   >
-                    <p className="text-[var(--text-primary)]">{item.name}</p>
-                    <p className="font-medium text-[var(--text-primary)]">{item.balance}</p>
+                    <p className="text-[1rem] text-[var(--text-primary)]">{item.name}</p>
+                    <p className="text-[1rem] font-medium text-[var(--text-primary)]">{item.balance}</p>
                   </div>
                 ))}
               </div>
-            </SurfaceCard>
+            </div>
           );
         })}
       </div>
 
-      <div className="border-t border-[var(--line)] pt-4">
-        <div className="flex items-center justify-between text-xl font-medium">
-          <span>Balance Total</span>
-          <span>$33.210</span>
+      <div className="mt-9 border-t border-white/12 pt-4">
+        <div className="flex items-center justify-between text-[1rem] text-[var(--text-primary)]">
+          <span className="font-medium">Balance Total</span>
+          <span className="font-semibold">$33.210</span>
         </div>
       </div>
 
       <button
         type="button"
-        className="mx-auto flex rounded-full bg-[var(--accent-soft)] px-8 py-3 text-lg font-medium text-[var(--accent)]"
+        className="mx-auto mt-8 flex min-h-[2.55rem] items-center justify-center rounded-full bg-[#0f2a39] px-9 text-[1rem] font-medium text-[var(--accent)]"
       >
         Agregar Cuenta
       </button>

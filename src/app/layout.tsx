@@ -22,7 +22,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${poppins.variable} h-full antialiased`}>
+    <html
+      lang="es"
+      className={`${poppins.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full bg-[var(--app-bg)] font-sans text-[var(--text-primary)]">
         {children}
       </body>
