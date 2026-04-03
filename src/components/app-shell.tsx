@@ -2,31 +2,49 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode, useMemo, useState } from "react";
+import type { PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowLeftRight,
   ArrowUpDown,
+  BadgeDollarSign,
+  BadgePercent,
   CalendarDays,
   Cloud,
+  CreditCard,
   DollarSign,
-  Filter,
+  FileText,
   FolderOpen,
   History,
+  ListChecks,
   Menu,
   Pencil,
   PieChart,
   Plus,
+  ReceiptText,
+  RotateCcw,
   Scale,
   Search,
   Wallet,
   House,
-  X,
 } from "lucide-react";
+
+import { quickActionItems } from "@/lib/mock-data";
 
 type Action = {
   label: string;
   icon: ReactNode;
   href?: string;
 };
+
+type SheetStage = "peek" | "full";
+
+const FAB_SHEET_ANIMATION_MS = 280;
+const SWIPE_UP_THRESHOLD = -44;
+const SWIPE_DOWN_THRESHOLD = 68;
+
+const FAB_SHEET_HEIGHT = "90svh";
+const FAB_SHEET_PEEK_OFFSET = "30svh";
 
 const navigationItems = [
   { href: "/", label: "Inicio", icon: House },
@@ -66,10 +84,220 @@ function actionMap(pathname: string): Action[] {
   ];
 }
 
+function renderQuickActionIcon(kind: (typeof quickActionItems)[number]["kind"]) {
+  switch (kind) {
+    case "expense":
+      return <ReceiptText size={23} strokeWidth={2} />;
+    case "payment":
+      return <FileText size={23} strokeWidth={2} />;
+    case "income":
+      return <BadgeDollarSign size={23} strokeWidth={2} />;
+    case "transfer":
+      return <ArrowLeftRight size={23} strokeWidth={2} />;
+    case "refund":
+      return <RotateCcw size={23} strokeWidth={2} />;
+    case "installments":
+      return <ListChecks size={23} strokeWidth={2} />;
+    case "cardPayment":
+      return <CreditCard size={23} strokeWidth={2} />;
+    case "cashback":
+      return <BadgePercent size={23} strokeWidth={2} />;
+  }
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [isFabOpen, setIsFabOpen] = useState(false);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const gestureStartYRef = useRef<number | null>(null);
+  const gestureDeltaYRef = useRef(0);
+
+  const [isFabMounted, setIsFabMounted] = useState(false);
+  const [isFabVisible, setIsFabVisible] = useState(false);
+  const [isDraggingSheet, setIsDraggingSheet] = useState(false);
+  const [sheetStage, setSheetStage] = useState<SheetStage>("peek");
+  const [sheetDragOffset, setSheetDragOffset] = useState(0);
   const actions = useMemo(() => actionMap(pathname), [pathname]);
+
+  const resetGesture = useCallback(() => {
+    gestureStartYRef.current = null;
+    gestureDeltaYRef.current = 0;
+    setIsDraggingSheet(false);
+    setSheetDragOffset(0);
+  }, []);
+
+  const closeFabSheet = useCallback(() => {
+    if (!isFabMounted) {
+      return;
+    }
+
+    setIsDraggingSheet(false);
+    setSheetDragOffset(0);
+    setIsFabVisible(false);
+
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+    }
+
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setIsFabMounted(false);
+      setSheetStage("peek");
+    }, FAB_SHEET_ANIMATION_MS);
+  }, [isFabMounted]);
+
+  const expandFabSheet = useCallback(() => {
+    setSheetStage("full");
+  }, []);
+
+  const collapseFabSheet = useCallback(() => {
+    setIsDraggingSheet(false);
+    setSheetDragOffset(0);
+    setSheetStage("peek");
+  }, []);
+
+  const openFabSheet = useCallback(() => {
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+    }
+
+    setIsDraggingSheet(false);
+    setSheetDragOffset(0);
+    setSheetStage("peek");
+    setIsFabMounted(true);
+
+    window.requestAnimationFrame(() => {
+      setIsFabVisible(true);
+    });
+  }, []);
+
+  const handleSheetWheel = useCallback(
+    (event: ReactWheelEvent<HTMLElement>) => {
+      if (Math.abs(event.deltaY) < 18) {
+        return;
+      }
+
+      if (sheetStage === "peek") {
+        event.preventDefault();
+
+        if (event.deltaY > 0) {
+          expandFabSheet();
+          return;
+        }
+
+        closeFabSheet();
+        return;
+      }
+
+      if (event.deltaY < 0) {
+        event.preventDefault();
+        collapseFabSheet();
+      }
+    },
+    [closeFabSheet, collapseFabSheet, expandFabSheet, sheetStage],
+  );
+
+  const handleSheetPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    gestureStartYRef.current = event.clientY;
+    gestureDeltaYRef.current = 0;
+    setIsDraggingSheet(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, []);
+
+  const handleSheetPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (gestureStartYRef.current === null) {
+      return;
+    }
+
+    const deltaY = event.clientY - gestureStartYRef.current;
+    gestureDeltaYRef.current = deltaY;
+
+    if (sheetStage === "peek") {
+      setSheetDragOffset(Math.max(-360, Math.min(260, deltaY)));
+      return;
+    }
+
+    if (deltaY > 0) {
+      setSheetDragOffset(Math.min(320, deltaY));
+      return;
+    }
+
+    setSheetDragOffset(Math.max(-56, deltaY * 0.18));
+  }, [sheetStage]);
+
+  const handleSheetPointerEnd = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      const deltaY = gestureDeltaYRef.current;
+      resetGesture();
+
+      if (sheetStage === "peek" && deltaY <= SWIPE_UP_THRESHOLD) {
+        expandFabSheet();
+        return;
+      }
+
+      if (deltaY >= SWIPE_DOWN_THRESHOLD) {
+        if (sheetStage === "full") {
+          collapseFabSheet();
+          return;
+        }
+
+        closeFabSheet();
+      }
+    },
+    [closeFabSheet, collapseFabSheet, expandFabSheet, resetGesture, sheetStage],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const sheetBaseOffset = sheetStage === "peek" ? FAB_SHEET_PEEK_OFFSET : "0px";
+  const sheetTranslateY = !isFabVisible
+    ? "calc(100% + 2rem)"
+    : isDraggingSheet
+      ? `calc(${sheetBaseOffset} + ${sheetDragOffset}px)`
+      : sheetBaseOffset;
+
+  useEffect(() => {
+    if (!isFabMounted) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFabMounted]);
+
+  useEffect(() => {
+    if (!isFabMounted) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeFabSheet();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeFabSheet, isFabMounted]);
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)] xl:flex">
@@ -172,54 +400,74 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button
           type="button"
           aria-label="Agregar nueva acción"
-          onClick={() => setIsFabOpen(true)}
+          aria-expanded={isFabMounted}
+          aria-controls="quick-actions-sheet"
+          onClick={openFabSheet}
           className="accent-ring grid h-[3.75rem] w-[3.75rem] place-items-center rounded-[1.15rem] bg-[var(--accent)] text-white shadow-[0_14px_30px_rgba(41,187,243,0.3)] transition hover:scale-[1.02]"
         >
           <Plus size={26} strokeWidth={2.2} />
         </button>
       </div>
 
-      {isFabOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm">
+      {isFabMounted ? (
+        <div className="fixed inset-0 z-50">
           <button
             type="button"
             aria-label="Cerrar acciones"
-            className="absolute inset-0"
-            onClick={() => setIsFabOpen(false)}
+            className={`absolute inset-0 transition-opacity duration-300 ${
+              isFabVisible ? "bg-black/58 backdrop-blur-sm" : "bg-black/0"
+            }`}
+            onClick={closeFabSheet}
           />
-          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px] rounded-t-[2rem] border border-white/10 bg-[var(--surface)] px-5 pb-10 pt-5 shadow-[0_-10px_30px_rgba(0,0,0,0.35)] md:max-w-[920px] md:rounded-t-[2.2rem] lg:max-w-[1180px] xl:inset-x-auto xl:bottom-5 xl:right-6 xl:mx-0 xl:max-w-[560px] xl:rounded-[2rem]">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
-                  Acción global
-                </p>
-                <h3 className="mt-1 text-2xl font-semibold">Nueva acción</h3>
-              </div>
-              <button
-                type="button"
-                aria-label="Cerrar panel"
-                onClick={() => setIsFabOpen(false)}
-                className="grid h-11 w-11 place-items-center rounded-2xl border border-[var(--line)] bg-[var(--surface-dark)] text-[var(--text-primary)]"
+          <div
+            id="quick-actions-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quick-actions-title"
+            onWheel={handleSheetWheel}
+            onPointerDown={handleSheetPointerDown}
+            onPointerMove={handleSheetPointerMove}
+            onPointerUp={handleSheetPointerEnd}
+            onPointerCancel={handleSheetPointerEnd}
+            className="absolute inset-x-0 bottom-0 flex w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-8 xl:inset-x-auto xl:bottom-5 xl:right-6 xl:w-[32rem] xl:rounded-[2rem]"
+            style={{
+              height: FAB_SHEET_HEIGHT,
+              opacity: isFabVisible ? 1 : 0.96,
+              transform: `translate3d(0, ${sheetTranslateY}, 0)`,
+              touchAction: "none",
+              userSelect: isDraggingSheet ? "none" : undefined,
+            }}
+          >
+            <div className="border-b border-white/7 px-4 pb-4 pt-3 md:px-5">
+              <div className="mx-auto mb-4 h-[0.32rem] w-14 rounded-full bg-white/92" />
+              <h3
+                id="quick-actions-title"
+                className="text-[1.62rem] font-medium tracking-[-0.055em] text-[var(--text-primary)] sm:text-[1.68rem] md:text-[1.76rem]"
               >
-                <X size={20} strokeWidth={2} />
-              </button>
+                Agregar transacción
+              </h3>
             </div>
 
-            <div className="rounded-3xl border border-dashed border-[var(--line-strong)] bg-[var(--app-bg-elevated)] p-5">
-              <div className="mb-3 inline-flex rounded-full bg-[var(--accent-soft)] px-3 py-1 text-sm font-medium text-[var(--accent)]">
-                Pendiente de definición
-              </div>
-              <p className="text-base leading-7 text-[var(--text-secondary)]">
-                Dejé el comportamiento visual del botón <strong>+</strong> con apertura desde abajo,
-                pero las opciones internas todavía no están detalladas en <code>idea.md</code>.
-                Cuando me pases esas acciones, se conectan acá sin romper la navegación.
-              </p>
-            </div>
+            <ul className="flex-1 overflow-hidden pb-6">
+              {quickActionItems.map((item) => (
+                <li key={item.id} className="border-b border-white/7 last:border-b-0">
+                  <div className="flex items-start gap-3 px-4 py-3.5 md:px-5 md:py-4">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.95rem] bg-white/[0.055] text-white/92 md:h-12 md:w-12">
+                      {renderQuickActionIcon(item.kind)}
+                    </div>
 
-            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[var(--surface-dark)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-              <Filter size={18} className="text-[var(--accent)]" />
-              Sin inventar features: se replica la animación base y se reserva el contenido real.
-            </div>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[var(--text-primary)] md:text-[1.03rem] xl:text-[1.05rem]">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 max-w-[42ch] text-[0.84rem] leading-[1.35rem] text-white/78 md:max-w-[58ch] md:text-[0.88rem] md:leading-[1.45rem]">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       ) : null}

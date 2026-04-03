@@ -55,7 +55,16 @@ export const categories = [
 
 export const accountTabs = ["Cuentas de débito", "Tarjetas de crédito"] as const;
 
-export const accountGroups = [
+export type DebitAccountGroup = {
+  title: string;
+  total: string;
+  items: Array<{
+    name: string;
+    balance: string;
+  }>;
+};
+
+export const debitAccountGroups: DebitAccountGroup[] = [
   {
     title: "Cheques",
     total: "$33.210",
@@ -68,6 +77,93 @@ export const accountGroups = [
     title: "Efectivo",
     total: "$0",
     items: [{ name: "Cash", balance: "$0" }],
+  },
+];
+
+export type CreditCardAccount = {
+  name: string;
+  maskedNumber: string;
+  balance: string;
+  availableLabel: string;
+  availableAmount: string;
+  status: string;
+};
+
+export const creditCardAccounts: CreditCardAccount[] = [
+  {
+    name: "CRM",
+    maskedNumber: "**** 2356",
+    balance: "$0",
+    availableLabel: "Disponible",
+    availableAmount: "$15.000",
+    status: "No tienes pagos pendientes para este periodo",
+  },
+];
+
+export type QuickActionItem = {
+  id: string;
+  title: string;
+  description: string;
+  kind:
+    | "expense"
+    | "payment"
+    | "income"
+    | "transfer"
+    | "refund"
+    | "installments"
+    | "cardPayment"
+    | "cashback";
+};
+
+export const quickActionItems: QuickActionItem[] = [
+  {
+    id: "expense",
+    title: "Gasto",
+    description: "Registra una compra o un pago que hiciste, como supermercado, gasolina o restaurantes.",
+    kind: "expense",
+  },
+  {
+    id: "payment",
+    title: "Pago",
+    description: "Registra un pago que necesites hacer, como suscripciones, renta o servicios.",
+    kind: "payment",
+  },
+  {
+    id: "income",
+    title: "Ingreso",
+    description: "Registra tu salario, bonos, freelance u otro ingreso que recibas.",
+    kind: "income",
+  },
+  {
+    id: "transfer",
+    title: "Transferencia",
+    description: "Registra movimientos entre cuentas, como transferencia de cuenta de cheques a ahorro.",
+    kind: "transfer",
+  },
+  {
+    id: "refund",
+    title: "Reembolso",
+    description: "Registra un reembolso que recibiste, como al devolver un producto.",
+    kind: "refund",
+  },
+  {
+    id: "installments",
+    title: "Compra a meses",
+    description: "Registra una compra a meses con tarjeta de crédito.",
+    kind: "installments",
+  },
+  {
+    id: "card-payment",
+    title: "Pago de Tarjeta",
+    description: "Registra un pago realizado a tu tarjeta de crédito.",
+    kind: "cardPayment",
+  },
+  {
+    id: "cashback",
+    title: "Devolución en Efectivo",
+    description:
+      "Registra recompensas de cashback que recibiste, como recompensas de tarjeta de crédito o beneficios de programas de fidelidad.",
+    kind: "cashback",
   },
 ];
 
