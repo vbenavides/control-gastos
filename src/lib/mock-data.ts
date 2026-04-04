@@ -55,6 +55,8 @@ export const categories = [
 
 export const accountTabs = ["Cuentas de débito", "Tarjetas de crédito"] as const;
 
+export const addAccountTypeOptions = ["Cheques", "Ahorro", "Efectivo"] as const;
+
 export type DebitAccountGroup = {
   title: string;
   total: string;

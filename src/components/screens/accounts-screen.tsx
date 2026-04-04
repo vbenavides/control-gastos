@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { Banknote, CircleCheck, CreditCard } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { accountTabs, creditCardAccounts, debitAccountGroups } from "@/lib/mock-data";
 
@@ -9,11 +10,27 @@ type AccountTab = (typeof accountTabs)[number];
 
 const DEBIT_TAB = "Cuentas de débito" as const;
 const CREDIT_TAB = "Tarjetas de crédito" as const;
+const DEBIT_TAB_PATH = "/cuentas?tab=debito";
+const CREDIT_TAB_PATH = "/cuentas?tab=credito";
+const ADD_ACTION_BUTTON_CLASS =
+  "mx-auto mt-8 flex min-h-[2.55rem] items-center justify-center rounded-full bg-[#0f2a39] px-9 text-[1rem] font-medium text-[var(--accent)]";
 
 export function AccountsScreen() {
-  const [activeTab, setActiveTab] = useState<AccountTab>(DEBIT_TAB);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "credito" ? CREDIT_TAB : DEBIT_TAB;
+  const [activeTab, setActiveTab] = useState<AccountTab>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const isCreditTab = activeTab === CREDIT_TAB;
+
+  const handleTabChange = (tab: AccountTab) => {
+    setActiveTab(tab);
+    router.replace(tab === CREDIT_TAB ? CREDIT_TAB_PATH : DEBIT_TAB_PATH, { scroll: false });
+  };
 
   return (
     <div className="mx-auto w-full max-w-[540px] pt-5 md:max-w-[920px] lg:max-w-[1080px]">
@@ -28,7 +45,7 @@ export function AccountsScreen() {
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={`relative px-3 pb-3.5 text-[1rem] font-medium transition-colors ${
                   isActive ? "text-[var(--accent)]" : "text-white/80"
                 }`}
@@ -52,12 +69,23 @@ export function AccountsScreen() {
         </div>
       </div>
 
-      <button
-        type="button"
-        className="mx-auto mt-8 flex min-h-[2.55rem] items-center justify-center rounded-full bg-[#0f2a39] px-9 text-[1rem] font-medium text-[var(--accent)]"
-      >
-        {isCreditTab ? "Agregar Tarjeta" : "Agregar Cuenta"}
-      </button>
+      {isCreditTab ? (
+        <button
+          type="button"
+          onClick={() => router.push("/cuentas/tarjeta/agregar")}
+          className={ADD_ACTION_BUTTON_CLASS}
+        >
+          Agregar Tarjeta
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => router.push("/cuentas/agregar")}
+          className={ADD_ACTION_BUTTON_CLASS}
+        >
+          Agregar Cuenta
+        </button>
+      )}
     </div>
   );
 }
