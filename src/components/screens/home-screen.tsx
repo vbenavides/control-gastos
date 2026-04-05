@@ -27,7 +27,7 @@ export function HomeScreen() {
             <div className="flex-1 space-y-4 text-sm">
               <div>
                 <p className="text-[var(--text-secondary)]">Balance Actual</p>
-                <p className="mt-1 text-[1.7rem] font-semibold text-[var(--text-primary)] md:text-[2rem]">
+                <p className="type-display mt-1 font-semibold text-[var(--text-primary)]">
                   {homeSummary.actualBalance}
                 </p>
               </div>
@@ -82,15 +82,15 @@ export function HomeScreen() {
                   <Icon size={18} />
                 </IconBadge>
                 <div>
-                  <p className="text-base text-[var(--text-secondary)]">{card.title}</p>
-                  <p className="text-[1.65rem] font-semibold text-[var(--text-primary)]">
+                  <p className="type-body text-[var(--text-secondary)]">{card.title}</p>
+                  <p className="type-body-strong font-semibold text-[var(--text-primary)]">
                     {card.amount}
                   </p>
                 </div>
               </div>
               <div className="px-5 py-4 text-[var(--text-secondary)]">
-                <p className="text-sm">Gastos principales</p>
-                <p className="mt-2 text-lg font-medium text-[var(--text-primary)]">
+                <p className="type-label">Gastos principales</p>
+                <p className="type-body-strong mt-2 font-medium text-[var(--text-primary)]">
                   {card.description}
                 </p>
               </div>

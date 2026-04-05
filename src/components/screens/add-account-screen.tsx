@@ -23,7 +23,7 @@ export function AddAccountScreen() {
             <ArrowLeft size={22} />
           </Link>
 
-          <h1 className="text-center text-[1.46rem] font-medium tracking-[-0.01em] text-[var(--text-primary)]">
+          <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
             Agregar Cuenta
           </h1>
 
@@ -32,10 +32,10 @@ export function AddAccountScreen() {
 
         <form className="flex flex-1 flex-col" onSubmit={(event) => event.preventDefault()}>
           <section className="px-1 pt-8 text-center">
-            <p className="text-[0.84rem] text-[var(--text-primary)]">Cantidad a ingresar</p>
+            <p className="type-label text-[var(--text-primary)]">Cantidad a ingresar</p>
 
-            <div className="mt-2.5 flex items-baseline justify-center gap-[1px] font-medium leading-none tracking-[-0.02em] text-[var(--text-primary)]">
-              <span aria-hidden="true" className="text-[2.18rem] leading-none sm:text-[2.28rem]">
+            <div className="type-display mt-2.5 flex items-baseline justify-center gap-[1px] font-medium text-[var(--text-primary)]">
+              <span aria-hidden="true">
                 $
               </span>
               <label htmlFor="amount" className="sr-only">
@@ -58,7 +58,7 @@ export function AddAccountScreen() {
                     setAmount("0");
                   }
                 }}
-                className="w-[2.3ch] border-0 bg-transparent p-0 text-center text-[2.18rem] font-medium leading-none tracking-[-0.02em] text-[var(--text-primary)] outline-none [appearance:textfield] sm:text-[2.28rem] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-[2.3ch] border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 aria-describedby="add-account-helper"
               />
             </div>
@@ -66,7 +66,7 @@ export function AddAccountScreen() {
 
           <section className="mt-10 space-y-0">
             <div className="border-b border-[var(--line-strong)] pb-2.5">
-              <label htmlFor="description" className="mb-1 block text-[0.86rem] text-[var(--text-primary)]">
+              <label htmlFor="description" className="type-label mb-1 block text-[var(--text-primary)]">
                 Descripción
               </label>
 
@@ -78,14 +78,14 @@ export function AddAccountScreen() {
                   type="text"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[1rem] leading-none outline-none placeholder:text-[var(--text-secondary)]"
+                  className="type-body min-w-0 flex-1 border-0 bg-transparent p-0 outline-none placeholder:text-[var(--text-secondary)]"
                   placeholder="Nombre de la cuenta"
                 />
               </div>
             </div>
 
             <div className="border-b border-[var(--line-strong)] pb-2.5 pt-2.5">
-              <label htmlFor="account-type" className="mb-1 block text-[0.86rem] text-[var(--text-primary)]">
+              <label htmlFor="account-type" className="type-label mb-1 block text-[var(--text-primary)]">
                 Tipo
               </label>
 
@@ -98,7 +98,7 @@ export function AddAccountScreen() {
                   onChange={(event) =>
                     setAccountType(event.target.value as (typeof addAccountTypeOptions)[number])
                   }
-                  className="min-h-10 w-full appearance-none border-0 bg-transparent py-0 pr-7 text-[1rem] font-medium outline-none"
+                  className="type-body min-h-10 w-full appearance-none border-0 bg-transparent py-0 pr-7 font-medium outline-none"
                 >
                   {addAccountTypeOptions.map((option) => (
                     <option key={option} value={option} className="bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -115,7 +115,7 @@ export function AddAccountScreen() {
             <div className="border-t border-white/6 px-2 pb-3 pt-4">
               <button
                 type="submit"
-                className="flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 text-[1rem] font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)]"
+                className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)]"
               >
                 Guardar
               </button>

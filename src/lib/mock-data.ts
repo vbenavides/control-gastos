@@ -61,6 +61,7 @@ export type DebitAccountGroup = {
   title: string;
   total: string;
   items: Array<{
+    slug: string;
     name: string;
     balance: string;
   }>;
@@ -71,14 +72,195 @@ export const debitAccountGroups: DebitAccountGroup[] = [
     title: "Cheques",
     total: "$33.210",
     items: [
-      { name: "Falabella", balance: "$33.210" },
-      { name: "Mercado Pago", balance: "$0" },
+      { slug: "falabella", name: "Falabella", balance: "$33.210" },
+      { slug: "mercado-pago", name: "Mercado Pago", balance: "$0" },
     ],
   },
   {
     title: "Efectivo",
     total: "$0",
-    items: [{ name: "Cash", balance: "$0" }],
+    items: [{ slug: "cash", name: "Cash", balance: "$0" }],
+  },
+];
+
+export type DebitAccountTransaction = {
+  slug: string;
+  dateLabel: string;
+  description: string;
+  accountName: string;
+  amount: string;
+  runningBalance: string;
+  category: string;
+  transactionDate: string;
+  paymentDate: string;
+  note?: string;
+  statusLabel: string;
+  iconKind: "piggy-bank" | "shopping-cart" | "layers" | "train" | "heart" | "utensils";
+  iconBackground: string;
+  iconColor: string;
+};
+
+export type DebitAccountDetail = {
+  slug: string;
+  name: string;
+  balance: string;
+  recentTransactions: DebitAccountTransaction[];
+};
+
+export const debitAccountDetails: DebitAccountDetail[] = [
+  {
+    slug: "falabella",
+    name: "Falabella",
+    balance: "$33.210",
+    recentTransactions: [
+      {
+        slug: "qweqweq",
+        dateLabel: "13 feb 2026",
+        description: "qweqweq",
+        accountName: "Falabella",
+        amount: "$50",
+        runningBalance: "$33.210",
+        category: "Otros",
+        transactionDate: "13 feb 2026",
+        paymentDate: "13 feb 2026",
+        statusLabel: "PAGADO",
+        iconKind: "piggy-bank",
+        iconBackground: "#76263a",
+        iconColor: "#ff8ea8",
+      },
+      {
+        slug: "lider",
+        dateLabel: "12 sept 2025",
+        description: "lider",
+        accountName: "Falabella",
+        amount: "$55.630",
+        runningBalance: "$33.260",
+        category: "Groceries",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "shopping-cart",
+        iconBackground: "#6b341d",
+        iconColor: "#ffb08d",
+      },
+      {
+        slug: "reparacion-pantalla-jf",
+        dateLabel: "12 sept 2025",
+        description: "reparación pantalla jf",
+        accountName: "Falabella",
+        amount: "$5.000",
+        runningBalance: "$88.890",
+        category: "Servicios",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "layers",
+        iconBackground: "#53206f",
+        iconColor: "#d490ff",
+      },
+      {
+        slug: "brujita",
+        dateLabel: "12 sept 2025",
+        description: "brujita",
+        accountName: "Falabella",
+        amount: "$2.590",
+        runningBalance: "$93.890",
+        category: "Servicios",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "layers",
+        iconBackground: "#53206f",
+        iconColor: "#d490ff",
+      },
+      {
+        slug: "recarga-wom",
+        dateLabel: "12 sept 2025",
+        description: "recarga wom",
+        accountName: "Falabella",
+        amount: "$2.000",
+        runningBalance: "$96.480",
+        category: "Servicios",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "layers",
+        iconBackground: "#53206f",
+        iconColor: "#d490ff",
+      },
+      {
+        slug: "metro",
+        dateLabel: "12 sept 2025",
+        description: "metro",
+        accountName: "Falabella",
+        amount: "$10.000",
+        runningBalance: "$98.480",
+        category: "Transporte",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "train",
+        iconBackground: "#273785",
+        iconColor: "#9eb1ff",
+      },
+      {
+        slug: "crema-de-pies",
+        dateLabel: "12 sept 2025",
+        description: "crema de pies",
+        accountName: "Falabella",
+        amount: "$7.600",
+        runningBalance: "$108.480",
+        category: "Salud",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "heart",
+        iconBackground: "#70681f",
+        iconColor: "#ebe26a",
+      },
+      {
+        slug: "verdes",
+        dateLabel: "12 sept 2025",
+        description: "verdes",
+        accountName: "Falabella",
+        amount: "$5.500",
+        runningBalance: "$116.080",
+        category: "Groceries",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "shopping-cart",
+        iconBackground: "#6b341d",
+        iconColor: "#ffb08d",
+      },
+      {
+        slug: "2-papelones",
+        dateLabel: "12 sept 2025",
+        description: "2 papelones",
+        accountName: "Falabella",
+        amount: "$12.500",
+        runningBalance: "$121.580",
+        category: "Restaurantes",
+        transactionDate: "12 sept 2025",
+        paymentDate: "12 sept 2025",
+        statusLabel: "PAGADO",
+        iconKind: "utensils",
+        iconBackground: "#70306d",
+        iconColor: "#ff92f4",
+      },
+    ],
+  },
+  {
+    slug: "mercado-pago",
+    name: "Mercado Pago",
+    balance: "$0",
+    recentTransactions: [],
+  },
+  {
+    slug: "cash",
+    name: "Cash",
+    balance: "$0",
+    recentTransactions: [],
   },
 ];
 
@@ -168,6 +350,20 @@ export const quickActionItems: QuickActionItem[] = [
     kind: "cashback",
   },
 ];
+
+export const accountQuickActionItems = quickActionItems.filter(
+  (item) => item.kind !== "installments" && item.kind !== "cardPayment",
+);
+
+export function getDebitAccountDetail(accountSlug: string) {
+  return debitAccountDetails.find((account) => account.slug === accountSlug);
+}
+
+export function getDebitAccountTransaction(accountSlug: string, transactionSlug: string) {
+  return getDebitAccountDetail(accountSlug)?.recentTransactions.find(
+    (transaction) => transaction.slug === transactionSlug,
+  );
+}
 
 export const historyRange = "3 mar 2026 - 2 abr 2026";
 

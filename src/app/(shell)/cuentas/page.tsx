@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+
 import { AccountsScreen } from "@/components/screens/accounts-screen";
 
 export const metadata: Metadata = {
@@ -6,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AccountsPage() {
-  return <AccountsScreen />;
+  return (
+    <Suspense fallback={null}>
+      <AccountsScreen />
+    </Suspense>
+  );
 }

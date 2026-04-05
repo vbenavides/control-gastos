@@ -21,7 +21,7 @@ export function SectionHeader({
 }) {
   return (
     <div className={`mb-3 flex items-center justify-between gap-3 ${className}`}>
-      <h2 className="text-[1.95rem] font-medium tracking-[-0.04em] text-[var(--text-primary)]">
+      <h2 className="type-section-title font-medium text-[var(--text-primary)]">
         {title}
       </h2>
       {action}
@@ -40,7 +40,7 @@ export function SubsectionHeader({
 }) {
   return (
     <div className={`mb-3 flex items-center justify-between gap-3 ${className}`}>
-      <h3 className="text-[1.4rem] font-semibold text-[var(--text-primary)]">{title}</h3>
+      <h3 className="type-subsection-title font-semibold text-[var(--text-primary)]">{title}</h3>
       {action}
     </div>
   );
@@ -152,9 +152,9 @@ export function EmptyState({
         {icon}
       </div>
       <div className="space-y-1">
-        <p className="text-[1.05rem] font-medium text-[var(--text-primary)]">{title}</p>
+        <p className="type-body font-medium text-[var(--text-primary)]">{title}</p>
         {description ? (
-          <p className="text-sm text-[var(--text-secondary)]">{description}</p>
+          <p className="type-label text-[var(--text-secondary)]">{description}</p>
         ) : null}
       </div>
     </div>

@@ -29,7 +29,7 @@ import {
   House,
 } from "lucide-react";
 
-import { quickActionItems } from "@/lib/mock-data";
+import { accountQuickActionItems, quickActionItems } from "@/lib/mock-data";
 
 type Action = {
   label: string;
@@ -117,6 +117,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [sheetStage, setSheetStage] = useState<SheetStage>("peek");
   const [sheetDragOffset, setSheetDragOffset] = useState(0);
   const actions = useMemo(() => actionMap(pathname), [pathname]);
+  const visibleQuickActions = useMemo(
+    () => (pathname.startsWith("/cuentas") ? accountQuickActionItems : quickActionItems),
+    [pathname],
+  );
 
   const resetGesture = useCallback(() => {
     gestureStartYRef.current = null;
@@ -442,25 +446,25 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="mx-auto mb-4 h-[0.32rem] w-14 rounded-full bg-white/92" />
               <h3
                 id="quick-actions-title"
-                className="text-[1.62rem] font-medium tracking-[-0.055em] text-[var(--text-primary)] sm:text-[1.68rem] md:text-[1.76rem]"
+                className="type-section-title font-medium text-[var(--text-primary)]"
               >
                 Agregar transacción
               </h3>
             </div>
 
             <ul className="flex-1 overflow-hidden pb-6">
-              {quickActionItems.map((item) => (
+              {visibleQuickActions.map((item) => (
                 <li key={item.id} className="border-b border-white/7 last:border-b-0">
-                  <div className="flex items-start gap-3 px-4 py-3.5 md:px-5 md:py-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.95rem] bg-white/[0.055] text-white/92 md:h-12 md:w-12">
+                  <div className="flex w-full items-center gap-3 px-4 py-3.5 md:px-5 md:py-4">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-[0.95rem] bg-white/[0.055] text-white/92 md:h-12 md:w-12">
                       {renderQuickActionIcon(item.kind)}
                     </div>
 
-                    <div className="min-w-0 pt-0.5">
-                      <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[var(--text-primary)] md:text-[1.03rem] xl:text-[1.05rem]">
+                    <div className="min-w-0 flex-1">
+                      <p className="type-body font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
                         {item.title}
                       </p>
-                      <p className="mt-1 max-w-[42ch] text-[0.84rem] leading-[1.35rem] text-white/78 md:max-w-[58ch] md:text-[0.88rem] md:leading-[1.45rem]">
+                      <p className="mt-1 text-[0.81rem] leading-[1.28rem] text-white/78 md:text-[0.84rem] md:leading-[1.34rem]">
                         {item.description}
                       </p>
                     </div>

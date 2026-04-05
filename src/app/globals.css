@@ -17,12 +17,29 @@
   --success: #77d65d;
   --warning: #e5db58;
   --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.18);
+  --font-size-helper: 0.75rem;
+  --font-size-label: 0.875rem;
+  --font-size-body: 1rem;
+  --font-size-emphasized: 1.125rem;
+  --font-size-subsection: 1.125rem;
+  --font-size-section: 1.25rem;
+  --font-size-page: 1.5rem;
+  --font-size-display: 1.875rem;
 }
 
 @theme inline {
   --color-background: var(--app-bg);
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-poppins);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --font-size-subsection: 1.25rem;
+    --font-size-section: 1.5rem;
+    --font-size-page: 1.875rem;
+    --font-size-display: 2.125rem;
+  }
 }
 
 * {
@@ -72,6 +89,50 @@ button {
 
 .accent-ring {
   box-shadow: 0 0 0 1px rgba(41, 187, 243, 0.2);
+}
+
+.type-helper {
+  font-size: var(--font-size-helper);
+  line-height: 1.35;
+}
+
+.type-label {
+  font-size: var(--font-size-label);
+  line-height: 1.4;
+}
+
+.type-body {
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+
+.type-body-strong {
+  font-size: var(--font-size-emphasized);
+  line-height: 1.35;
+}
+
+.type-subsection-title {
+  font-size: var(--font-size-subsection);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.type-section-title {
+  font-size: var(--font-size-section);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.type-page-title {
+  font-size: var(--font-size-page);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.type-display {
+  font-size: var(--font-size-display);
+  line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 @keyframes fab-sheet-slide-up {

@@ -6,7 +6,7 @@ export function CategoriesScreen() {
   return (
     <div className="mx-auto w-full max-w-[1080px] space-y-5 pt-2 md:space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-[2rem] font-medium tracking-[-0.04em] md:text-[2.35rem]">Abr 2026</h1>
+        <h1 className="type-page-title font-medium">Abr 2026</h1>
         <div className="flex items-center gap-2">
           <button type="button" className="grid h-10 w-10 place-items-center rounded-full text-white/90">
             <ChevronLeft size={24} />
@@ -20,13 +20,13 @@ export function CategoriesScreen() {
       <SurfaceCard className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center md:px-6 md:py-6">
         <CircularProgress value={12} center={<span className="text-lg font-semibold">0 %</span>} />
         <div className="space-y-2">
-          <p className="text-xl text-[var(--text-primary)]">{categorySummary.label}</p>
-          <p className="text-[2.2rem] font-semibold leading-none text-[var(--text-primary)]">
+          <p className="type-body-strong text-[var(--text-primary)]">{categorySummary.label}</p>
+          <p className="type-display font-semibold text-[var(--text-primary)]">
             {categorySummary.amount}
           </p>
-          <div className="flex flex-wrap items-center gap-2 text-lg text-[var(--text-secondary)]">
+          <div className="type-body flex flex-wrap items-center gap-2 text-[var(--text-secondary)]">
             <span>{categorySummary.spentText}</span>
-            <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-base font-medium text-[var(--accent)]">
+            <span className="type-body rounded-full bg-[var(--accent-soft)] px-3 py-1 font-medium text-[var(--accent)]">
               {categorySummary.total}
             </span>
           </div>
@@ -36,12 +36,12 @@ export function CategoriesScreen() {
       <div className="border-b border-[var(--line)] pb-5">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[1.7rem] font-semibold">Sin grupo</p>
-            <p className="mt-1 text-lg text-[var(--text-secondary)]">0 transacciones</p>
+            <p className="type-body-strong font-semibold">Sin grupo</p>
+            <p className="type-body mt-1 text-[var(--text-secondary)]">0 transacciones</p>
           </div>
           <div className="text-right">
-            <p className="text-[1.9rem] font-semibold">$0</p>
-            <p className="mt-1 text-lg text-[var(--text-secondary)]">$185.000 restante</p>
+            <p className="type-display font-semibold">$0</p>
+            <p className="type-body mt-1 text-[var(--text-secondary)]">$185.000 restante</p>
           </div>
         </div>
       </div>
@@ -60,17 +60,17 @@ export function CategoriesScreen() {
                 </div>
                 <div className="flex-1 space-y-2">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[1.35rem] font-medium text-[var(--text-primary)]">
+                     <div>
+                      <p className="type-body-strong font-medium text-[var(--text-primary)]">
                         {category.name}
                       </p>
-                      <p className="text-[0.95rem] text-[var(--text-secondary)]">0 transacciones</p>
+                      <p className="type-label text-[var(--text-secondary)]">0 transacciones</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[1.35rem] font-medium text-[var(--text-primary)]">
+                      <p className="type-body-strong font-medium text-[var(--text-primary)]">
                         {category.amount}
                       </p>
-                      <p className="text-[0.95rem] text-[var(--text-secondary)]">{category.remaining}</p>
+                      <p className="type-label text-[var(--text-secondary)]">{category.remaining}</p>
                     </div>
                   </div>
                   <ProgressBar value={category.progress} color={category.accent} />
