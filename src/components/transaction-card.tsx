@@ -68,6 +68,7 @@ export function TransactionCard({
 
       <Link
         href={`/cuentas/debito/${accountSlug}/transaccion/${transaction.id}`}
+        prefetch={true}
         className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 transition hover:bg-[#1b2732] md:min-h-[5.15rem] md:px-4 md:py-3.5"
       >
         <div

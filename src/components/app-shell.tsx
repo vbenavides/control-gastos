@@ -318,6 +318,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <li key={href}>
                   <Link
                     href={href}
+                    prefetch={true}
                     className={`flex items-center gap-4 rounded-2xl px-4 py-3 text-[1.05rem] font-medium transition ${
                       isActive
                         ? "bg-[var(--accent)] text-white shadow-[0_14px_30px_rgba(41,187,243,0.2)]"
@@ -347,7 +348,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
               if (action.href) {
                 return (
-                  <Link key={action.label} href={action.href} aria-label={action.label}>
+                  <Link key={action.label} href={action.href} prefetch={true} aria-label={action.label}>
                     {content}
                   </Link>
                 );
@@ -374,6 +375,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <li key={href}>
                   <Link
                     href={href}
+                    prefetch={true}
                     aria-label={label}
                     className="flex h-11 items-center justify-center rounded-2xl py-1 text-xs text-[var(--text-secondary)] transition"
                   >

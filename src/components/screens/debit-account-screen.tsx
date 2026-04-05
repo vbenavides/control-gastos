@@ -145,6 +145,19 @@ export function DebitAccountScreen() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showBalanceDialog]);
 
+  useEffect(() => {
+    if (!account) {
+      return;
+    }
+
+    router.prefetch(`/cuentas/debito/${account.id}/editar`);
+    router.prefetch(`/cuentas/debito/${account.id}/transacciones`);
+
+    for (const transaction of recentTransactions) {
+      router.prefetch(`/cuentas/debito/${account.id}/transaccion/${transaction.id}`);
+    }
+  }, [account, recentTransactions, router]);
+
   // Estado: cargando
   if (accountsLoading) {
     return (
@@ -212,6 +225,7 @@ export function DebitAccountScreen() {
         <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
           <Link
             href="/cuentas?tab=debito"
+            prefetch={true}
             aria-label="Volver a cuentas"
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >
@@ -224,6 +238,7 @@ export function DebitAccountScreen() {
 
           <Link
             href={`/cuentas/debito/${account.id}/editar`}
+            prefetch={true}
             aria-label="Editar cuenta"
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >
@@ -267,6 +282,7 @@ export function DebitAccountScreen() {
                     <Link
                       key={transaction.id}
                       href={`/cuentas/debito/${account.id}/transaccion/${transaction.id}`}
+                      prefetch={true}
                       className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
                     >
                       <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
@@ -305,6 +321,7 @@ export function DebitAccountScreen() {
                 <div className="flex justify-center px-1 pb-5 pt-7">
                   <Link
                     href={`/cuentas/debito/${account.id}/transacciones`}
+                    prefetch={true}
                     className="inline-flex min-h-[2.6rem] items-center justify-center rounded-full bg-[#0f2a39] px-8 text-[0.98rem] font-medium text-[var(--accent)] shadow-[0_10px_22px_rgba(2,10,18,0.24)] transition hover:bg-[#123247]"
                   >
                     Ver todas las transacciones

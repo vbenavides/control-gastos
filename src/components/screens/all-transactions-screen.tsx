@@ -55,6 +55,7 @@ export function AllTransactionsScreen() {
           <header className="flex items-center justify-between pt-1">
             <Link
               href="/cuentas?tab=debito"
+              prefetch={true}
               aria-label="Volver a cuentas"
               className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
             >
@@ -77,6 +78,7 @@ export function AllTransactionsScreen() {
           <div className="flex items-center justify-between">
             <Link
               href={accountHref}
+              prefetch={true}
               aria-label="Volver a cuenta"
               className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
             >
@@ -93,6 +95,7 @@ export function AllTransactionsScreen() {
               </button>
               <Link
                 href="/menu"
+                prefetch={true}
                 aria-label="Abrir menú"
                 className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
               >

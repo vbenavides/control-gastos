@@ -62,6 +62,7 @@ export function AddCreditCardScreen() {
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
           <Link
             href="/cuentas?tab=credito"
+            prefetch={true}
             aria-label="Volver a cuentas"
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >

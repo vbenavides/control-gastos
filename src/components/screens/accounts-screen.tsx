@@ -57,6 +57,15 @@ export function AccountsScreen() {
     setActiveTab(initialTab);
   }, [initialTab]);
 
+  useEffect(() => {
+    router.prefetch("/cuentas/agregar");
+    router.prefetch("/cuentas/tarjeta/agregar");
+
+    for (const account of accounts ?? []) {
+      router.prefetch(`/cuentas/debito/${account.id}`);
+    }
+  }, [accounts, router]);
+
   const isCreditTab = activeTab === CREDIT_TAB;
 
   const debitGroups = useMemo(() => groupAccountsByType(accounts ?? []), [accounts]);
