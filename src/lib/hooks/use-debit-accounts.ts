@@ -1,9 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
+import { useAppData } from "@/components/app-data-provider";
 import type { DebitAccount } from "@/lib/models";
-import { getRepositories } from "@/lib/repositories";
 
 export type UseDebitAccountsResult = {
   /** null mientras se cargan los datos del cliente. */
@@ -19,41 +17,13 @@ export type UseDebitAccountsResult = {
 };
 
 export function useDebitAccounts(): UseDebitAccountsResult {
-  const [accounts, setAccounts] = useState<DebitAccount[] | null>(null);
+  const { accounts, isHydrated, createDebitAccount, updateDebitAccount, removeDebitAccount } = useAppData();
 
-  useEffect(() => {
-    getRepositories()
-      .debitAccounts.getAll()
-      .then(setAccounts);
-  }, []);
-
-  const create = useCallback(
-    async (data: Omit<DebitAccount, "id" | "createdAt">): Promise<DebitAccount> => {
-      const account = await getRepositories().debitAccounts.create(data);
-      setAccounts((prev) => (prev ? [...prev, account] : [account]));
-      return account;
-    },
-    [],
-  );
-
-  const update = useCallback(
-    async (
-      id: string,
-      data: Partial<Omit<DebitAccount, "id" | "createdAt">>,
-    ): Promise<DebitAccount> => {
-      const account = await getRepositories().debitAccounts.update(id, data);
-      setAccounts((prev) => (prev ? prev.map((a) => (a.id === id ? account : a)) : [account]));
-      return account;
-    },
-    [],
-  );
-
-  const remove = useCallback(async (id: string): Promise<void> => {
-    const repos = getRepositories();
-    await repos.transactions.deleteByAccountId(id);
-    await repos.debitAccounts.delete(id);
-    setAccounts((prev) => (prev ? prev.filter((a) => a.id !== id) : []));
-  }, []);
-
-  return { accounts, isLoading: accounts === null, create, update, remove };
+  return {
+    accounts,
+    isLoading: !isHydrated,
+    create: createDebitAccount,
+    update: updateDebitAccount,
+    remove: removeDebitAccount,
+  };
 }
