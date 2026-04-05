@@ -44,7 +44,6 @@ const FAB_SHEET_ANIMATION_MS = 280;
 const SWIPE_UP_THRESHOLD = -44;
 const SWIPE_DOWN_THRESHOLD = 68;
 
-const FAB_SHEET_HEIGHT = "90svh";
 const FAB_SHEET_PEEK_OFFSET = "30svh";
 
 const navigationItems = [
@@ -429,9 +428,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             onPointerMove={handleSheetPointerMove}
             onPointerUp={handleSheetPointerEnd}
             onPointerCancel={handleSheetPointerEnd}
-            className="absolute inset-x-0 bottom-0 flex w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-8 xl:inset-x-auto xl:bottom-5 xl:right-6 xl:w-[32rem] xl:rounded-[2rem]"
+            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-8 xl:inset-x-auto xl:bottom-5 xl:right-6 xl:w-[32rem] xl:rounded-[2rem]"
             style={{
-              height: FAB_SHEET_HEIGHT,
               opacity: isFabVisible ? 1 : 0.96,
               transform: `translate3d(0, ${sheetTranslateY}, 0)`,
               touchAction: "none",
@@ -448,7 +446,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </h3>
             </div>
 
-            <ul className="flex-1 overflow-hidden pb-6">
+            <ul className="flex-1 overflow-y-auto pb-6">
               {visibleQuickActions.map((item) => (
                 <li key={item.id} className="border-b border-white/7 last:border-b-0">
                   <div className="flex w-full items-center gap-3 px-4 py-3.5 md:px-5 md:py-4">
