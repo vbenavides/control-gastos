@@ -2,19 +2,31 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, HeartPulse, Layers3, Pencil, PiggyBank, ShoppingCart, TrainFront, UtensilsCrossed } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  HeartPulse,
+  Layers3,
+  Pencil,
+  PiggyBank,
+  ShoppingCart,
+  TrainFront,
+  UtensilsCrossed,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccountQuickActionsFab } from "@/components/account-quick-actions-fab";
-import type { DebitAccountTransaction } from "@/lib/mock-data";
-import { getDebitAccountDetail } from "@/lib/mock-data";
+import { formatAmountCLP } from "@/lib/currency";
+import type { Transaction, TransactionIconKind } from "@/lib/models";
+import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
+import { useTransactions } from "@/lib/hooks/use-transactions";
 
 type TopNotice = {
   title: string;
   description: string;
 };
 
-function renderTransactionIcon(kind: DebitAccountTransaction["iconKind"]) {
+function renderTransactionIcon(kind: TransactionIconKind) {
   switch (kind) {
     case "piggy-bank":
       return <PiggyBank size={15} strokeWidth={2.2} />;
@@ -31,113 +43,120 @@ function renderTransactionIcon(kind: DebitAccountTransaction["iconKind"]) {
   }
 }
 
+function formatDateLabel(isoDate: string): string {
+  const date = new Date(isoDate);
+  const months = [
+    "ene", "feb", "mar", "abr", "may", "jun",
+    "jul", "ago", "sep", "oct", "nov", "dic",
+  ];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export function DebitAccountScreen() {
   const params = useParams<{ accountSlug: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const accountSlug = typeof params.accountSlug === "string" ? params.accountSlug : "";
+  const accountId = typeof params.accountSlug === "string" ? params.accountSlug : "";
   const searchQuery = searchParams.toString();
 
-  const account = useMemo(() => getDebitAccountDetail(accountSlug), [accountSlug]);
+  const { accounts, isLoading: accountsLoading, update: updateAccount } = useDebitAccounts();
+  const { transactions, isLoading: txLoading } = useTransactions();
+
+  const account = useMemo(
+    () => (accounts ?? []).find((a) => a.id === accountId) ?? null,
+    [accounts, accountId],
+  );
+
+  const recentTransactions = useMemo(
+    () =>
+      (transactions ?? [])
+        .filter((t) => t.accountId === accountId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10),
+    [transactions, accountId],
+  );
+
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const [bottomNotice, setBottomNotice] = useState<string | null>(null);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
-  const [balanceInputValue, setBalanceInputValue] = useState(account?.balance ?? "$0");
+  const [balanceInputValue, setBalanceInputValue] = useState("0");
 
   const openBalanceDialog = useCallback(() => {
-    setBalanceInputValue(account?.balance ?? "$0");
+    setBalanceInputValue(account ? String(account.balance) : "0");
     setShowBalanceDialog(true);
   }, [account]);
 
-  const handleSaveBalance = useCallback(() => {
+  const handleSaveBalance = useCallback(async () => {
+    if (!account) return;
+    const parsed = parseFloat(balanceInputValue.replace(",", ".")) || 0;
+    await updateAccount(account.id, { balance: parsed });
     setShowBalanceDialog(false);
     setTopNotice({
-      title: `${account?.name ?? "Cuenta"}: ${balanceInputValue}`,
+      title: `${account.name}: ${formatAmountCLP(parsed)}`,
       description: "Balance de cuenta actualizado",
     });
-  }, [account, balanceInputValue]);
+  }, [account, balanceInputValue, updateAccount]);
 
-
-
+  // Leer query params de navegación (updated, deleted)
   useEffect(() => {
-    if (!account) {
-      return;
-    }
-
-    if (!searchQuery) {
-      return;
-    }
+    if (!account || !searchQuery) return;
 
     const nextParams = new URLSearchParams(searchQuery);
     const shouldShowUpdated = nextParams.get("updated") === "1";
     const deletedLabel = nextParams.get("deleted");
 
-    if (!shouldShowUpdated && !deletedLabel) {
-      return;
-    }
+    if (!shouldShowUpdated && !deletedLabel) return;
 
     const frame = window.setTimeout(() => {
       if (shouldShowUpdated) {
         setTopNotice({
-          title: `${account.name}: ${account.balance}`,
+          title: `${account.name}: ${formatAmountCLP(account.balance)}`,
           description: "Balance de cuenta actualizado",
         });
       }
-
       if (deletedLabel) {
         setBottomNotice(`Eliminado ${deletedLabel}`);
       }
     }, 0);
 
-    router.replace(`/cuentas/debito/${account.slug}`, { scroll: false });
+    router.replace(`/cuentas/debito/${account.id}`, { scroll: false });
 
-    return () => {
-      window.clearTimeout(frame);
-    };
+    return () => window.clearTimeout(frame);
   }, [account, router, searchQuery]);
 
   useEffect(() => {
-    if (!topNotice) {
-      return;
-    }
-
+    if (!topNotice) return;
     const timer = window.setTimeout(() => setTopNotice(null), 3200);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [topNotice]);
 
   useEffect(() => {
-    if (!bottomNotice) {
-      return;
-    }
-
+    if (!bottomNotice) return;
     const timer = window.setTimeout(() => setBottomNotice(null), 3400);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [bottomNotice]);
 
   useEffect(() => {
-    if (!showBalanceDialog) {
-      return;
-    }
-
+    if (!showBalanceDialog) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setShowBalanceDialog(false);
-      }
+      if (event.key === "Escape") setShowBalanceDialog(false);
     };
-
     window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showBalanceDialog]);
 
+  // Estado: cargando
+  if (accountsLoading) {
+    return (
+      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center px-4">
+          <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Estado: no encontrada
   if (!account) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -150,12 +169,14 @@ export function DebitAccountScreen() {
             >
               <ArrowLeft size={22} />
             </Link>
-            <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">Cuenta no encontrada</h1>
+            <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
+              Cuenta no encontrada
+            </h1>
             <div aria-hidden="true" />
           </header>
 
           <div className="type-body flex flex-1 items-center justify-center px-4 text-center text-[var(--text-secondary)]">
-            No encontramos esta cuenta mockeada todavía.
+            No encontramos esta cuenta.
           </div>
         </div>
       </div>
@@ -202,7 +223,7 @@ export function DebitAccountScreen() {
           </h1>
 
           <Link
-            href={`/cuentas/debito/${account.slug}/editar`}
+            href={`/cuentas/debito/${account.id}/editar`}
             aria-label="Editar cuenta"
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >
@@ -214,7 +235,7 @@ export function DebitAccountScreen() {
           <section className="px-1 pt-8 text-center md:pt-10">
             <p className="type-body text-[var(--text-primary)]">Balance</p>
             <p className="type-display mt-1 font-medium text-[var(--text-primary)]">
-              {account.balance}
+              {formatAmountCLP(account.balance)}
             </p>
 
             <button
@@ -231,62 +252,59 @@ export function DebitAccountScreen() {
               Transacciones recientes
             </h2>
 
-            {account.recentTransactions.length === 0 ? (
+            {txLoading ? (
+              <div className="type-body mt-5 text-[var(--text-secondary)]">
+                Cargando transacciones…
+              </div>
+            ) : recentTransactions.length === 0 ? (
               <div className="type-body mt-5 rounded-[1rem] border border-white/8 bg-[var(--surface)] px-4 py-5 text-[var(--text-secondary)]">
-                Esta cuenta todavía no tiene transacciones mockeadas.
+                Esta cuenta todavía no tiene transacciones.
               </div>
             ) : (
               <>
                 <div className="mt-4 space-y-3 md:space-y-3.5">
-                  {account.recentTransactions.map((transaction) => {
-                    return (
-                      <Link
-                        key={transaction.slug}
-                        href={`/cuentas/debito/${account.slug}/transaccion/${transaction.slug}`}
-                        className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
-                      >
-                        <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
-                          <span>{transaction.dateLabel}</span>
-                          <Check size={15} strokeWidth={2.3} className="shrink-0" />
+                  {recentTransactions.map((transaction: Transaction) => (
+                    <Link
+                      key={transaction.id}
+                      href={`/cuentas/debito/${account.id}/transaccion/${transaction.id}`}
+                      className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
+                    >
+                      <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
+                        <span>{formatDateLabel(transaction.date)}</span>
+                        <Check size={15} strokeWidth={2.3} className="shrink-0" />
+                      </div>
+
+                      <div className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 md:min-h-[5.15rem] md:px-4 md:py-3.5">
+                        <div
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
+                          style={{
+                            backgroundColor: transaction.iconBackground,
+                            color: transaction.iconColor,
+                          }}
+                        >
+                          {renderTransactionIcon(transaction.iconKind)}
                         </div>
 
-                        <div className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 md:min-h-[5.15rem] md:px-4 md:py-3.5">
-                          <div
-                            className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
-                            style={{
-                              backgroundColor: transaction.iconBackground,
-                              color: transaction.iconColor,
-                            }}
-                          >
-                            {renderTransactionIcon(transaction.iconKind)}
-                          </div>
-
-                          <div className="min-w-0 flex-1 self-center">
-                            <p className="type-body truncate text-[var(--text-primary)]">
-                              {transaction.description}
-                            </p>
-                            <p className="type-label mt-1.5 text-white/82">
-                              {transaction.accountName}
-                            </p>
-                          </div>
-
-                          <div className="shrink-0 self-center text-right">
-                            <p className="type-body text-[var(--text-primary)]">
-                              {transaction.amount}
-                            </p>
-                            <p className="type-label mt-1.5 text-white/76">
-                              {transaction.runningBalance}
-                            </p>
-                          </div>
+                        <div className="min-w-0 flex-1 self-center">
+                          <p className="type-body truncate text-[var(--text-primary)]">
+                            {transaction.description}
+                          </p>
+                          <p className="type-label mt-1.5 text-white/82">{account.name}</p>
                         </div>
-                      </Link>
-                    );
-                  })}
+
+                        <div className="shrink-0 self-center text-right">
+                          <p className="type-body text-[var(--text-primary)]">
+                            {formatAmountCLP(transaction.amount)}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
 
                 <div className="flex justify-center px-1 pb-5 pt-7">
                   <Link
-                    href={`/cuentas/debito/${account.slug}/transacciones`}
+                    href={`/cuentas/debito/${account.id}/transacciones`}
                     className="inline-flex min-h-[2.6rem] items-center justify-center rounded-full bg-[#0f2a39] px-8 text-[0.98rem] font-medium text-[var(--accent)] shadow-[0_10px_22px_rgba(2,10,18,0.24)] transition hover:bg-[#123247]"
                   >
                     Ver todas las transacciones

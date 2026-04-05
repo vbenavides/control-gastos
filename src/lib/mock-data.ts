@@ -1,294 +1,25 @@
-export const homeSummary = {
-  actualBalance: "$33.210",
-  projectedBalance: "$33.210",
-  projectedExpense: "$0",
-  remaining: "$33.210",
-};
+/**
+ * mock-data.ts — configuración estática de la UI.
+ *
+ * Este archivo ya NO contiene datos de usuario (cuentas, transacciones, categorías).
+ * Esos datos viven en localStorage a través de la capa de repositorios.
+ *
+ * Lo que queda aquí son constantes de UI que nunca se almacenan en la DB:
+ *   - tabs, opciones de select, ítems de menú rápido, secciones de menú.
+ */
 
-export const monthCards = [
-  {
-    title: "Gasto General",
-    amount: "$0",
-    description: "Sin entradas aún",
-  },
-  {
-    title: "Gasto con Tarjetas",
-    amount: "$0",
-    description: "Sin entradas aún",
-  },
-  {
-    title: "Ingreso recibido",
-    amount: "$0",
-    description: "No hay ingresos programados",
-  },
-  {
-    title: "Flujo neto",
-    amount: "$0",
-    description: "Ingreso $0",
-  },
-];
+import type { AccountType } from "@/lib/models";
 
-export const categorySummary = {
-  label: "Restante",
-  amount: "$500.000",
-  spentText: "Gastado $0 de",
-  total: "$500.000",
-  progress: 0,
-};
+// Re-exportar AccountType para mantener compatibilidad con los selects de formularios.
+export type { AccountType };
 
-export const categories = [
-  {
-    name: "Education",
-    amount: "$0 de $5.000",
-    remaining: "$5.000 restante",
-    accent: "var(--success)",
-    progress: 0,
-  },
-  {
-    name: "Medical & Healthcare",
-    amount: "$0 de $180.000",
-    remaining: "$180.000 restante",
-    accent: "var(--warning)",
-    progress: 0,
-  },
-];
-
+/** Tabs de la pantalla de cuentas. */
 export const accountTabs = ["Cuentas de débito", "Tarjetas de crédito"] as const;
 
-export const addAccountTypeOptions = ["Cheques", "Ahorro", "Efectivo"] as const;
+/** Opciones del tipo de cuenta de débito. */
+export const addAccountTypeOptions: AccountType[] = ["Cheques", "Ahorro", "Efectivo"];
 
-export type DebitAccountType = (typeof addAccountTypeOptions)[number];
-
-export type DebitAccountGroup = {
-  title: string;
-  total: string;
-  items: Array<{
-    slug: string;
-    name: string;
-    balance: string;
-  }>;
-};
-
-export const debitAccountGroups: DebitAccountGroup[] = [
-  {
-    title: "Cheques",
-    total: "$33.210",
-    items: [
-      { slug: "falabella", name: "Falabella", balance: "$33.210" },
-      { slug: "mercado-pago", name: "Mercado Pago", balance: "$0" },
-    ],
-  },
-  {
-    title: "Efectivo",
-    total: "$0",
-    items: [{ slug: "cash", name: "Cash", balance: "$0" }],
-  },
-];
-
-export type DebitAccountTransaction = {
-  slug: string;
-  dateLabel: string;
-  description: string;
-  accountName: string;
-  amount: string;
-  runningBalance: string;
-  category: string;
-  transactionDate: string;
-  paymentDate: string;
-  note?: string;
-  statusLabel: string;
-  iconKind: "piggy-bank" | "shopping-cart" | "layers" | "train" | "heart" | "utensils";
-  iconBackground: string;
-  iconColor: string;
-};
-
-export type DebitAccountDetail = {
-  slug: string;
-  name: string;
-  balance: string;
-  type: DebitAccountType;
-  recentTransactions: DebitAccountTransaction[];
-};
-
-export const debitAccountDetails: DebitAccountDetail[] = [
-  {
-    slug: "falabella",
-    name: "Falabella",
-    balance: "$33.210",
-    type: "Cheques",
-    recentTransactions: [
-      {
-        slug: "qweqweq",
-        dateLabel: "13 feb 2026",
-        description: "qweqweq",
-        accountName: "Falabella",
-        amount: "$50",
-        runningBalance: "$33.210",
-        category: "Otros",
-        transactionDate: "13 feb 2026",
-        paymentDate: "13 feb 2026",
-        statusLabel: "PAGADO",
-        iconKind: "piggy-bank",
-        iconBackground: "#76263a",
-        iconColor: "#ff8ea8",
-      },
-      {
-        slug: "lider",
-        dateLabel: "12 sept 2025",
-        description: "lider",
-        accountName: "Falabella",
-        amount: "$55.630",
-        runningBalance: "$33.260",
-        category: "Groceries",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "shopping-cart",
-        iconBackground: "#6b341d",
-        iconColor: "#ffb08d",
-      },
-      {
-        slug: "reparacion-pantalla-jf",
-        dateLabel: "12 sept 2025",
-        description: "reparación pantalla jf",
-        accountName: "Falabella",
-        amount: "$5.000",
-        runningBalance: "$88.890",
-        category: "Servicios",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "layers",
-        iconBackground: "#53206f",
-        iconColor: "#d490ff",
-      },
-      {
-        slug: "brujita",
-        dateLabel: "12 sept 2025",
-        description: "brujita",
-        accountName: "Falabella",
-        amount: "$2.590",
-        runningBalance: "$93.890",
-        category: "Servicios",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "layers",
-        iconBackground: "#53206f",
-        iconColor: "#d490ff",
-      },
-      {
-        slug: "recarga-wom",
-        dateLabel: "12 sept 2025",
-        description: "recarga wom",
-        accountName: "Falabella",
-        amount: "$2.000",
-        runningBalance: "$96.480",
-        category: "Servicios",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "layers",
-        iconBackground: "#53206f",
-        iconColor: "#d490ff",
-      },
-      {
-        slug: "metro",
-        dateLabel: "12 sept 2025",
-        description: "metro",
-        accountName: "Falabella",
-        amount: "$10.000",
-        runningBalance: "$98.480",
-        category: "Transporte",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "train",
-        iconBackground: "#273785",
-        iconColor: "#9eb1ff",
-      },
-      {
-        slug: "crema-de-pies",
-        dateLabel: "12 sept 2025",
-        description: "crema de pies",
-        accountName: "Falabella",
-        amount: "$7.600",
-        runningBalance: "$108.480",
-        category: "Salud",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "heart",
-        iconBackground: "#70681f",
-        iconColor: "#ebe26a",
-      },
-      {
-        slug: "verdes",
-        dateLabel: "12 sept 2025",
-        description: "verdes",
-        accountName: "Falabella",
-        amount: "$5.500",
-        runningBalance: "$116.080",
-        category: "Groceries",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "shopping-cart",
-        iconBackground: "#6b341d",
-        iconColor: "#ffb08d",
-      },
-      {
-        slug: "2-papelones",
-        dateLabel: "12 sept 2025",
-        description: "2 papelones",
-        accountName: "Falabella",
-        amount: "$12.500",
-        runningBalance: "$121.580",
-        category: "Restaurantes",
-        transactionDate: "12 sept 2025",
-        paymentDate: "12 sept 2025",
-        statusLabel: "PAGADO",
-        iconKind: "utensils",
-        iconBackground: "#70306d",
-        iconColor: "#ff92f4",
-      },
-    ],
-  },
-  {
-    slug: "mercado-pago",
-    name: "Mercado Pago",
-    balance: "$0",
-    type: "Cheques",
-    recentTransactions: [],
-  },
-  {
-    slug: "cash",
-    name: "Cash",
-    balance: "$0",
-    type: "Efectivo",
-    recentTransactions: [],
-  },
-];
-
-export type CreditCardAccount = {
-  name: string;
-  maskedNumber: string;
-  balance: string;
-  availableLabel: string;
-  availableAmount: string;
-  status: string;
-};
-
-export const creditCardAccounts: CreditCardAccount[] = [
-  {
-    name: "CRM",
-    maskedNumber: "**** 2356",
-    balance: "$0",
-    availableLabel: "Disponible",
-    availableAmount: "$15.000",
-    status: "No tienes pagos pendientes para este periodo",
-  },
-];
+// ─── Acciones rápidas del FAB "+" ────────────────────────────────────────────
 
 export type QuickActionItem = {
   id: string;
@@ -309,13 +40,15 @@ export const quickActionItems: QuickActionItem[] = [
   {
     id: "expense",
     title: "Gasto",
-    description: "Registra una compra o un pago que hiciste, como supermercado, gasolina o restaurantes.",
+    description:
+      "Registra una compra o un pago que hiciste, como supermercado, gasolina o restaurantes.",
     kind: "expense",
   },
   {
     id: "payment",
     title: "Pago",
-    description: "Registra un pago que necesites hacer, como suscripciones, renta o servicios.",
+    description:
+      "Registra un pago que necesites hacer, como suscripciones, renta o servicios.",
     kind: "payment",
   },
   {
@@ -327,7 +60,8 @@ export const quickActionItems: QuickActionItem[] = [
   {
     id: "transfer",
     title: "Transferencia",
-    description: "Registra movimientos entre cuentas, como transferencia de cuenta de cheques a ahorro.",
+    description:
+      "Registra movimientos entre cuentas, como transferencia de cuenta de cheques a ahorro.",
     kind: "transfer",
   },
   {
@@ -361,31 +95,22 @@ export const accountQuickActionItems = quickActionItems.filter(
   (item) => item.kind !== "installments" && item.kind !== "cardPayment",
 );
 
-export function getDebitAccountDetail(accountSlug: string) {
-  return debitAccountDetails.find((account) => account.slug === accountSlug);
-}
+// ─── Secciones del menú hamburguesa ─────────────────────────────────────────
 
-export function getDebitAccountTransaction(accountSlug: string, transactionSlug: string) {
-  return getDebitAccountDetail(accountSlug)?.recentTransactions.find(
-    (transaction) => transaction.slug === transactionSlug,
-  );
-}
+export const menuSections = {
+  general: ["Categorías", "Transacciones Recurrentes", "Presupuesto", "Análisis"],
+  tools: ["Importar", "Exportar"],
+};
 
-export type TransactionWithAccount = DebitAccountTransaction & { accountSlug: string };
+// ─── Datos estáticos del calendario ─────────────────────────────────────────
+// (pendiente de conectar a datos reales)
 
-export function getAllDebitTransactions(): TransactionWithAccount[] {
-  return debitAccountDetails.flatMap((account) =>
-    account.recentTransactions.map((t) => ({ ...t, accountSlug: account.slug })),
-  );
-}
-
-export const historyRange = "3 mar 2026 - 2 abr 2026";
-
+// Pendiente de conectar a datos reales de cuentas
 export const calendarHeader = {
   month: "Abr 2026",
   balanceDate: "30 abr",
-  accounts: "$33.210",
-  creditCards: "$200",
+  accounts: "$0",
+  creditCards: "$0",
 };
 
 export const calendarDays = [
@@ -432,8 +157,3 @@ export const calendarDays = [
   { day: 8, muted: true },
   { day: 9, muted: true },
 ];
-
-export const menuSections = {
-  general: ["Categorías", "Transacciones Recurrentes", "Presupuesto", "Análisis"],
-  tools: ["Importar", "Exportar"],
-};

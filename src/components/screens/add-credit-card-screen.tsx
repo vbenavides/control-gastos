@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Bell,
@@ -15,16 +16,45 @@ import {
 import type { HTMLAttributes, ReactNode } from "react";
 import { useState } from "react";
 
+import { useCreditCards } from "@/lib/hooks/use-credit-cards";
+
 export function AddCreditCardScreen() {
+  const router = useRouter();
+  const { create } = useCreditCards();
+
   const [balance, setBalance] = useState("0");
   const [description, setDescription] = useState("");
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [creditLimit, setCreditLimit] = useState("0");
-  const [annualInterestRate, setAnnualInterestRate] = useState("0,00");
+  const [annualInterestRate, setAnnualInterestRate] = useState("0");
   const [statementDay, setStatementDay] = useState("1");
   const [paymentDay, setPaymentDay] = useState("1");
   const [gracePeriodDays, setGracePeriodDays] = useState("10");
   const [paymentReminderEnabled, setPaymentReminderEnabled] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await create({
+        name: description.trim() || "Sin nombre",
+        last4: lastFourDigits.slice(0, 4),
+        balance: parseFloat(balance.replace(",", ".")) || 0,
+        limit: parseFloat(creditLimit.replace(",", ".")) || 0,
+        interestRate: parseFloat(annualInterestRate.replace(",", ".")) || 0,
+        statementDay: parseInt(statementDay, 10) || 1,
+        paymentDay: parseInt(paymentDay, 10) || 1,
+        gracePeriodDays: parseInt(gracePeriodDays, 10) || 10,
+        paymentReminderEnabled,
+      });
+      router.push("/cuentas?tab=credito");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -45,14 +75,12 @@ export function AddCreditCardScreen() {
           <div aria-hidden="true" />
         </header>
 
-        <form className="flex flex-1 flex-col" onSubmit={(event) => event.preventDefault()}>
+        <form className="flex flex-1 flex-col" onSubmit={handleSubmit}>
           <section className="px-1 pt-8 text-center">
             <p className="type-label text-[var(--text-primary)]">Balance</p>
 
             <div className="type-display mt-2.5 flex items-baseline justify-center gap-[1px] font-medium text-[var(--text-primary)]">
-              <span aria-hidden="true">
-                $
-              </span>
+              <span aria-hidden="true">$</span>
               <label htmlFor="credit-card-balance" className="sr-only">
                 Balance
               </label>
@@ -66,9 +94,7 @@ export function AddCreditCardScreen() {
                 value={balance}
                 onChange={(event) => setBalance(event.target.value)}
                 onBlur={() => {
-                  if (balance.trim() === "") {
-                    setBalance("0");
-                  }
+                  if (balance.trim() === "") setBalance("0");
                 }}
                 className="w-[2.3ch] border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
@@ -107,7 +133,11 @@ export function AddCreditCardScreen() {
               />
             </FormField>
 
-            <FormField htmlFor="credit-card-interest-rate" label="Tasa de Interés Anual" withTopPadding>
+            <FormField
+              htmlFor="credit-card-interest-rate"
+              label="Tasa de Interés Anual"
+              withTopPadding
+            >
               <InlineAmountInput
                 id="credit-card-interest-rate"
                 icon={<Percent size={16} className="shrink-0 text-white/92" />}
@@ -151,14 +181,17 @@ export function AddCreditCardScreen() {
                 inputMode="numeric"
               />
 
-              <p className="type-helper mt-1.5 max-w-[30rem] text-white/88 italic">
-                Ajusta este valor solo si tus fechas de pago en la app no coinciden con el calendario de pagos de tu tarjeta.
+              <p className="type-helper mt-1.5 max-w-[30rem] italic text-white/88">
+                Ajusta este valor solo si tus fechas de pago en la app no coinciden con el
+                calendario de pagos de tu tarjeta.
               </p>
             </div>
 
             <div className="border-b border-[var(--line-strong)] py-5">
               <div className="flex items-center justify-between gap-4">
-                <p className="type-body text-[var(--text-primary)]">Recordatorio de fecha de vencimiento de pago</p>
+                <p className="type-body text-[var(--text-primary)]">
+                  Recordatorio de fecha de vencimiento de pago
+                </p>
 
                 <button
                   type="button"
@@ -177,8 +210,14 @@ export function AddCreditCardScreen() {
               </div>
 
               <div className="mt-4 space-y-4">
-                <ReminderRow icon={<Bell size={17} className="text-white/92" />} value="Día anterior" />
-                <ReminderRow icon={<Clock3 size={17} className="text-white/92" />} value="10:00" />
+                <ReminderRow
+                  icon={<Bell size={17} className="text-white/92" />}
+                  value="Día anterior"
+                />
+                <ReminderRow
+                  icon={<Clock3 size={17} className="text-white/92" />}
+                  value="10:00"
+                />
               </div>
             </div>
           </section>
@@ -187,16 +226,13 @@ export function AddCreditCardScreen() {
             <div className="border-t border-white/6 px-2 pb-3 pt-4">
               <button
                 type="submit"
-                className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)]"
+                disabled={isSaving}
+                className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)] disabled:opacity-60"
               >
-                Guardar
+                {isSaving ? "Guardando…" : "Guardar"}
               </button>
             </div>
           </div>
-
-          <p className="sr-only">
-            Pantalla visual lista. La persistencia de la tarjeta de crédito todavía no está implementada.
-          </p>
         </form>
       </div>
     </div>
@@ -309,7 +345,9 @@ function DayField({
           type="text"
           inputMode="numeric"
           value={value}
-          onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, 2))}
+          onChange={(event) =>
+            onChange(event.target.value.replace(/\D/g, "").slice(0, 2))
+          }
           className="type-body w-[2ch] border-0 bg-transparent p-0 outline-none"
         />
       </div>

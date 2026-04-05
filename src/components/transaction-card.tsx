@@ -9,9 +9,29 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
-import type { DebitAccountTransaction } from "@/lib/mock-data";
+import type { Transaction, TransactionIconKind } from "@/lib/models";
+import { formatAmountCLP } from "@/lib/currency";
 
-function renderTransactionIcon(kind: DebitAccountTransaction["iconKind"]) {
+function formatDateLabel(isoDate: string): string {
+  const date = new Date(isoDate);
+  const months = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function renderTransactionIcon(kind: TransactionIconKind) {
   switch (kind) {
     case "piggy-bank":
       return <PiggyBank size={15} strokeWidth={2.2} />;
@@ -31,19 +51,23 @@ function renderTransactionIcon(kind: DebitAccountTransaction["iconKind"]) {
 export function TransactionCard({
   transaction,
   accountSlug,
+  accountName,
 }: Readonly<{
-  transaction: DebitAccountTransaction;
+  transaction: Transaction;
+  /** ID de la cuenta (parámetro de ruta). */
   accountSlug: string;
+  /** Nombre legible de la cuenta para mostrar en la card. */
+  accountName?: string;
 }>) {
   return (
     <div className="overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11]">
       <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
-        <span>{transaction.dateLabel}</span>
+        <span>{formatDateLabel(transaction.date)}</span>
         <Check size={15} strokeWidth={2.3} className="shrink-0" />
       </div>
 
       <Link
-        href={`/cuentas/debito/${accountSlug}/transaccion/${transaction.slug}`}
+        href={`/cuentas/debito/${accountSlug}/transaccion/${transaction.id}`}
         className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 transition hover:bg-[#1b2732] md:min-h-[5.15rem] md:px-4 md:py-3.5"
       >
         <div
@@ -57,15 +81,14 @@ export function TransactionCard({
         </div>
 
         <div className="min-w-0 flex-1 self-center">
-          <p className="type-body truncate text-[var(--text-primary)]">
-            {transaction.description}
-          </p>
-          <p className="type-label mt-1.5 text-white/82">{transaction.accountName}</p>
+          <p className="type-body truncate text-[var(--text-primary)]">{transaction.description}</p>
+          {accountName ? (
+            <p className="type-label mt-1.5 text-white/82">{accountName}</p>
+          ) : null}
         </div>
 
         <div className="shrink-0 self-center text-right">
-          <p className="type-body text-[var(--text-primary)]">{transaction.amount}</p>
-          <p className="type-label mt-1.5 text-white/76">{transaction.runningBalance}</p>
+          <p className="type-body text-[var(--text-primary)]">{formatAmountCLP(transaction.amount)}</p>
         </div>
       </Link>
     </div>

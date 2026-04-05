@@ -1,36 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, SquarePen, Trash2, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import type { DebitAccountType } from "@/lib/mock-data";
-import { addAccountTypeOptions, getDebitAccountDetail } from "@/lib/mock-data";
+import type { AccountType } from "@/lib/models";
+import { addAccountTypeOptions } from "@/lib/mock-data";
+import { formatAmountCLP } from "@/lib/currency";
+import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 
 type ActiveDialog = "delete" | null;
 
 export function EditDebitAccountScreen() {
   const params = useParams<{ accountSlug: string }>();
-  const accountSlug = typeof params.accountSlug === "string" ? params.accountSlug : "";
-  const account = useMemo(() => getDebitAccountDetail(accountSlug), [accountSlug]);
+  const router = useRouter();
+  const accountId = typeof params.accountSlug === "string" ? params.accountSlug : "";
+
+  const { accounts, isLoading, update, remove } = useDebitAccounts();
+  const account = useMemo(
+    () => (accounts ?? []).find((a) => a.id === accountId) ?? null,
+    [accounts, accountId],
+  );
+
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [bottomNotice, setBottomNotice] = useState<string | null>(null);
-  const [description, setDescription] = useState(() => account?.name ?? "");
-  const [accountType, setAccountType] = useState<DebitAccountType>(() => account?.type ?? "Cheques");
+  const [description, setDescription] = useState("");
+  const [accountType, setAccountType] = useState<AccountType>("Cheques");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Inicializar campos cuando el account carga
+  useEffect(() => {
+    if (account) {
+      setDescription(account.name);
+      setAccountType(account.type);
+    }
+  }, [account]);
 
   useEffect(() => {
-    if (!bottomNotice) {
-      return;
-    }
-
+    if (!bottomNotice) return;
     const timer = window.setTimeout(() => setBottomNotice(null), 3200);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, [bottomNotice]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-8 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+          <div className="type-body flex flex-1 items-center justify-center text-[var(--text-secondary)]">
+            Cargando…
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!account) {
     return (
@@ -44,19 +68,41 @@ export function EditDebitAccountScreen() {
             >
               <ArrowLeft size={22} />
             </Link>
-            <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">Cuenta no encontrada</h1>
+            <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
+              Cuenta no encontrada
+            </h1>
             <div aria-hidden="true" />
           </header>
 
           <div className="type-body flex flex-1 items-center justify-center px-4 text-center text-[var(--text-secondary)]">
-            No encontramos esta cuenta mockeada todavía.
+            No encontramos esta cuenta.
           </div>
         </div>
       </div>
     );
   }
 
-  const accountHref = `/cuentas/debito/${account.slug}`;
+  const accountHref = `/cuentas/debito/${account.id}`;
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await update(account.id, {
+        name: description.trim() || account.name,
+        type: accountType,
+      });
+      router.push(`${accountHref}?updated=1`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setActiveDialog(null);
+    await remove(account.id);
+    router.push(`/cuentas?tab=debito&deleted=${encodeURIComponent(account.name)}`);
+  };
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -96,12 +142,17 @@ export function EditDebitAccountScreen() {
 
         <section className="px-1 pt-8 text-center md:pt-10">
           <p className="type-label text-[var(--text-primary)]">Balance</p>
-          <p className="type-display mt-2 font-medium text-[var(--text-primary)]">{account.balance}</p>
+          <p className="type-display mt-2 font-medium text-[var(--text-primary)]">
+            {formatAmountCLP(account.balance)}
+          </p>
         </section>
 
         <section className="mt-11 space-y-0">
           <div className="border-b border-[var(--line-strong)] pb-3">
-            <label htmlFor="edit-account-description" className="type-label mb-2 block text-[var(--text-primary)]">
+            <label
+              htmlFor="edit-account-description"
+              className="type-label mb-2 block text-[var(--text-primary)]"
+            >
               Descripción
             </label>
 
@@ -119,7 +170,10 @@ export function EditDebitAccountScreen() {
           </div>
 
           <div className="border-b border-[var(--line-strong)] pb-3 pt-3">
-            <label htmlFor="edit-account-type" className="type-label mb-2 block text-[var(--text-primary)]">
+            <label
+              htmlFor="edit-account-type"
+              className="type-label mb-2 block text-[var(--text-primary)]"
+            >
               Tipo
             </label>
 
@@ -129,16 +183,23 @@ export function EditDebitAccountScreen() {
                 id="edit-account-type"
                 name="accountType"
                 value={accountType}
-                onChange={(event) => setAccountType(event.target.value as DebitAccountType)}
+                onChange={(event) => setAccountType(event.target.value as AccountType)}
                 className="type-body min-h-10 w-full appearance-none border-0 bg-transparent py-0 pr-7 font-medium outline-none"
               >
                 {addAccountTypeOptions.map((option) => (
-                  <option key={option} value={option} className="bg-[var(--app-bg)] text-[var(--text-primary)]">
+                  <option
+                    key={option}
+                    value={option}
+                    className="bg-[var(--app-bg)] text-[var(--text-primary)]"
+                  >
                     {option}
                   </option>
                 ))}
               </select>
-              <ChevronDown size={16} className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-white/80" />
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-white/80"
+              />
             </div>
           </div>
         </section>
@@ -148,10 +209,11 @@ export function EditDebitAccountScreen() {
         <div className="mx-auto w-full">
           <button
             type="button"
-            onClick={() => setBottomNotice("La persistencia de la edición todavía no está implementada.")}
-            className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)]"
+            disabled={isSaving}
+            onClick={handleSave}
+            className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)] disabled:opacity-60"
           >
-            Guardar
+            {isSaving ? "Guardando…" : "Guardar"}
           </button>
         </div>
       </div>
@@ -159,15 +221,12 @@ export function EditDebitAccountScreen() {
       <ConfirmDialog
         isOpen={activeDialog === "delete"}
         title="Eliminar cuenta"
-        description="Esto eliminará permanentemente la cuenta y todas sus transacciones asociadas, transacciones recurrentes y compras a meses. Esta acción no se puede deshacer."
+        description="Esto eliminará permanentemente la cuenta y todas sus transacciones asociadas. Esta acción no se puede deshacer."
         cancelLabel="Cancelar"
         confirmLabel="Eliminar"
         confirmClassName="text-[#ff5a3d]"
         onCancel={() => setActiveDialog(null)}
-        onConfirm={() => {
-          setActiveDialog(null);
-          setBottomNotice("La eliminación de cuentas todavía no está implementada en esta fase mock.");
-        }}
+        onConfirm={handleDelete}
       />
     </div>
   );

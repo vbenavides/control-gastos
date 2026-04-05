@@ -307,9 +307,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <DollarSign size={30} strokeWidth={2.5} />
             </div>
           </div>
-          <span className="mt-3 rounded-xl bg-[#ffbf45] px-3 py-1 text-sm font-semibold tracking-[0.04em] text-[#1e242b]">
-            PREMIUM
-          </span>
         </div>
 
         <nav aria-label="Navegación principal desktop">
