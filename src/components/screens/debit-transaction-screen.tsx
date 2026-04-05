@@ -13,8 +13,9 @@ import {
   Trash2,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { getDebitAccountDetail, getDebitAccountTransaction } from "@/lib/mock-data";
 
 type ActiveDialog = "delete" | "undo" | null;
@@ -63,19 +64,18 @@ export function DebitTransactionScreen() {
     );
   }
 
-  const accountHref = `/cuentas/debito/${account.slug}`;
-
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
       <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-28 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
-          <Link
-            href={accountHref}
-            aria-label="Volver a cuenta"
+          <button
+            type="button"
+            aria-label="Volver"
+            onClick={() => router.back()}
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >
             <ArrowLeft size={22} />
-          </Link>
+          </button>
 
           <h1 className="type-subsection-title text-center font-semibold text-[var(--text-primary)]">
             Editar Gasto
@@ -260,83 +260,6 @@ function TextAreaRow({
           rows={3}
           className="type-body min-h-[4.5rem] min-w-0 flex-1 resize-none border-0 bg-transparent p-0 pt-1 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
         />
-      </div>
-    </div>
-  );
-}
-
-function ConfirmDialog({
-  isOpen,
-  title,
-  description,
-  confirmLabel,
-  confirmClassName,
-  onCancel,
-  onConfirm,
-}: Readonly<{
-  isOpen: boolean;
-  title: string;
-  description: string;
-  confirmLabel: string;
-  confirmClassName?: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}>) {
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onCancel();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onCancel]);
-
-  if (!isOpen) {
-    return null;
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-      <button
-        type="button"
-        aria-label="Cerrar confirmación"
-        onClick={onCancel}
-        className="absolute inset-0 bg-black/70 backdrop-blur-[6px]"
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="relative w-full max-w-[22.5rem] rounded-[1.8rem] bg-[#121d27] px-6 py-7 shadow-[0_18px_42px_rgba(0,0,0,0.38)]"
-      >
-        <h2 className="type-subsection-title font-medium text-[var(--text-primary)]">{title}</h2>
-        <p className="type-body mt-6 max-w-[18rem] text-[var(--text-primary)]">{description}</p>
-
-        <div className="mt-7 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="type-body min-w-[4rem] rounded-full bg-[#0f2a39] px-5 py-2 font-medium text-[var(--accent)]"
-          >
-            NO
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className={`type-body min-w-[4rem] rounded-full bg-[#0f2a39] px-5 py-2 font-medium ${confirmClassName ?? "text-[var(--accent)]"}`}
-          >
-            {confirmLabel}
-          </button>
-        </div>
       </div>
     </div>
   );

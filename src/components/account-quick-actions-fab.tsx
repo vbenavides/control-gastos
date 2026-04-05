@@ -1,6 +1,6 @@
 "use client";
 
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeftRight,
@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+import { lockBodyScroll } from "@/lib/body-scroll-lock";
 import { accountQuickActionItems } from "@/lib/mock-data";
 
 type SheetStage = "peek" | "full";
@@ -103,6 +104,32 @@ export function AccountQuickActionsFab() {
     });
   }, []);
 
+  const handleSheetWheel = useCallback(
+    (event: ReactWheelEvent<HTMLElement>) => {
+      if (Math.abs(event.deltaY) < 18) {
+        return;
+      }
+
+      if (sheetStage === "peek") {
+        event.preventDefault();
+
+        if (event.deltaY > 0) {
+          expandSheet();
+          return;
+        }
+
+        closeSheet();
+        return;
+      }
+
+      if (event.deltaY < 0) {
+        event.preventDefault();
+        collapseSheet();
+      }
+    },
+    [closeSheet, collapseSheet, expandSheet, sheetStage],
+  );
+
   const handleSheetPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
@@ -169,12 +196,7 @@ export function AccountQuickActionsFab() {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    return lockBodyScroll();
   }, [isMounted]);
 
   useEffect(() => {
@@ -240,6 +262,7 @@ export function AccountQuickActionsFab() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="account-quick-actions-title"
+            onWheel={handleSheetWheel}
             onPointerDown={handleSheetPointerDown}
             onPointerMove={handleSheetPointerMove}
             onPointerUp={handleSheetPointerEnd}

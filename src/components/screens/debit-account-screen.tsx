@@ -41,13 +41,23 @@ export function DebitAccountScreen() {
   const account = useMemo(() => getDebitAccountDetail(accountSlug), [accountSlug]);
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const [bottomNotice, setBottomNotice] = useState<string | null>(null);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [balanceInputValue, setBalanceInputValue] = useState(account?.balance ?? "$0");
 
-  const showUpdatedNotice = useCallback(() => {
+  const openBalanceDialog = useCallback(() => {
+    setBalanceInputValue(account?.balance ?? "$0");
+    setShowBalanceDialog(true);
+  }, [account]);
+
+  const handleSaveBalance = useCallback(() => {
+    setShowBalanceDialog(false);
     setTopNotice({
-      title: `${account?.name ?? "Cuenta"}: ${account?.balance ?? "$0"}`,
+      title: `${account?.name ?? "Cuenta"}: ${balanceInputValue}`,
       description: "Balance de cuenta actualizado",
     });
-  }, [account]);
+  }, [account, balanceInputValue]);
+
+
 
   useEffect(() => {
     if (!account) {
@@ -110,6 +120,24 @@ export function DebitAccountScreen() {
     };
   }, [bottomNotice]);
 
+  useEffect(() => {
+    if (!showBalanceDialog) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowBalanceDialog(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showBalanceDialog]);
+
   if (!account) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -159,8 +187,8 @@ export function DebitAccountScreen() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-24 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
-        <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
+      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col px-4 pb-0 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+        <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
           <Link
             href="/cuentas?tab=debito"
             aria-label="Volver a cuentas"
@@ -173,87 +201,161 @@ export function DebitAccountScreen() {
             {account.name}
           </h1>
 
-          <button type="button" aria-label="Editar cuenta" className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]">
+          <Link
+            href={`/cuentas/debito/${account.slug}/editar`}
+            aria-label="Editar cuenta"
+            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
+          >
             <Pencil size={21} strokeWidth={2.2} />
-          </button>
+          </Link>
         </header>
 
-        <section className="px-1 pt-8 text-center md:pt-10">
-          <p className="type-body text-[var(--text-primary)]">Balance</p>
-          <p className="type-display mt-1 font-medium text-[var(--text-primary)]">
-            {account.balance}
-          </p>
+        <div className="min-h-0 flex-1 overflow-y-auto pb-24">
+          <section className="px-1 pt-8 text-center md:pt-10">
+            <p className="type-body text-[var(--text-primary)]">Balance</p>
+            <p className="type-display mt-1 font-medium text-[var(--text-primary)]">
+              {account.balance}
+            </p>
 
-          <button
-            type="button"
-            onClick={showUpdatedNotice}
-            className="mx-auto mt-5 inline-flex min-h-[2.4rem] items-center justify-center rounded-full bg-[#0f2a39] px-5 text-[1rem] font-medium text-[var(--accent)]"
-          >
-            Actualizar Balance
-          </button>
-        </section>
+            <button
+              type="button"
+              onClick={openBalanceDialog}
+              className="mx-auto mt-5 inline-flex min-h-[2.4rem] items-center justify-center rounded-full bg-[#0f2a39] px-5 text-[1rem] font-medium text-[var(--accent)]"
+            >
+              Actualizar Balance
+            </button>
+          </section>
 
-        <section className="mt-20 lg:mx-auto lg:w-full lg:max-w-[58rem] xl:max-w-[62rem]">
-          <h2 className="type-section-title font-medium text-[var(--text-primary)]">
-            Transacciones recientes
-          </h2>
+          <section className="mt-20 lg:mx-auto lg:w-full lg:max-w-[58rem] xl:max-w-[62rem]">
+            <h2 className="type-section-title font-medium text-[var(--text-primary)]">
+              Transacciones recientes
+            </h2>
 
-          {account.recentTransactions.length === 0 ? (
-            <div className="type-body mt-5 rounded-[1rem] border border-white/8 bg-[var(--surface)] px-4 py-5 text-[var(--text-secondary)]">
-              Esta cuenta todavía no tiene transacciones mockeadas.
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3 md:space-y-3.5">
-              {account.recentTransactions.map((transaction) => {
-                return (
-                  <Link
-                    key={transaction.slug}
-                    href={`/cuentas/debito/${account.slug}/transaccion/${transaction.slug}`}
-                    className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
-                  >
-                    <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
-                      <span>{transaction.dateLabel}</span>
-                      <Check size={15} strokeWidth={2.3} className="shrink-0" />
-                    </div>
-
-                    <div className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 md:min-h-[5.15rem] md:px-4 md:py-3.5">
-                      <div
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
-                        style={{
-                          backgroundColor: transaction.iconBackground,
-                          color: transaction.iconColor,
-                        }}
+            {account.recentTransactions.length === 0 ? (
+              <div className="type-body mt-5 rounded-[1rem] border border-white/8 bg-[var(--surface)] px-4 py-5 text-[var(--text-secondary)]">
+                Esta cuenta todavía no tiene transacciones mockeadas.
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 space-y-3 md:space-y-3.5">
+                  {account.recentTransactions.map((transaction) => {
+                    return (
+                      <Link
+                        key={transaction.slug}
+                        href={`/cuentas/debito/${account.slug}/transaccion/${transaction.slug}`}
+                        className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
                       >
-                        {renderTransactionIcon(transaction.iconKind)}
-                      </div>
+                        <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
+                          <span>{transaction.dateLabel}</span>
+                          <Check size={15} strokeWidth={2.3} className="shrink-0" />
+                        </div>
 
-                      <div className="min-w-0 flex-1 self-center">
-                        <p className="type-body truncate text-[var(--text-primary)]">
-                          {transaction.description}
-                        </p>
-                        <p className="type-label mt-1.5 text-white/82">
-                          {transaction.accountName}
-                        </p>
-                      </div>
+                        <div className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 md:min-h-[5.15rem] md:px-4 md:py-3.5">
+                          <div
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
+                            style={{
+                              backgroundColor: transaction.iconBackground,
+                              color: transaction.iconColor,
+                            }}
+                          >
+                            {renderTransactionIcon(transaction.iconKind)}
+                          </div>
 
-                      <div className="shrink-0 self-center text-right">
-                        <p className="type-body text-[var(--text-primary)]">
-                          {transaction.amount}
-                        </p>
-                        <p className="type-label mt-1.5 text-white/76">
-                          {transaction.runningBalance}
-                        </p>
-                      </div>
-                    </div>
+                          <div className="min-w-0 flex-1 self-center">
+                            <p className="type-body truncate text-[var(--text-primary)]">
+                              {transaction.description}
+                            </p>
+                            <p className="type-label mt-1.5 text-white/82">
+                              {transaction.accountName}
+                            </p>
+                          </div>
+
+                          <div className="shrink-0 self-center text-right">
+                            <p className="type-body text-[var(--text-primary)]">
+                              {transaction.amount}
+                            </p>
+                            <p className="type-label mt-1.5 text-white/76">
+                              {transaction.runningBalance}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-center px-1 pb-5 pt-7">
+                  <Link
+                    href={`/cuentas/debito/${account.slug}/transacciones`}
+                    className="inline-flex min-h-[2.6rem] items-center justify-center rounded-full bg-[#0f2a39] px-8 text-[0.98rem] font-medium text-[var(--accent)] shadow-[0_10px_22px_rgba(2,10,18,0.24)] transition hover:bg-[#123247]"
+                  >
+                    Ver todas las transacciones
                   </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
       </div>
 
       <AccountQuickActionsFab />
+
+      {showBalanceDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => setShowBalanceDialog(false)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-[6px]"
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Actualizar balance"
+            className="relative w-full max-w-[22rem] rounded-[1.8rem] bg-[#121d27] px-6 py-6 shadow-[0_18px_42px_rgba(0,0,0,0.38)]"
+          >
+            <h2 className="type-subsection-title font-medium text-[var(--text-primary)]">
+              Balance
+            </h2>
+
+            <div className="mt-5">
+              <label
+                htmlFor="balance-input"
+                className="type-label block text-center text-[var(--text-secondary)]"
+              >
+                Balance
+              </label>
+              <input
+                id="balance-input"
+                type="text"
+                inputMode="decimal"
+                autoFocus
+                value={balanceInputValue}
+                onChange={(event) => setBalanceInputValue(event.target.value)}
+                className="type-body mt-3 w-full rounded-[0.75rem] border border-white/12 bg-white/[0.04] px-4 py-3 text-center text-[var(--text-primary)] outline-none transition focus:border-[var(--accent)] focus:bg-white/[0.06]"
+              />
+            </div>
+
+            <div className="mt-6 flex items-center gap-6">
+              <button
+                type="button"
+                onClick={handleSaveBalance}
+                className="type-body font-medium text-[var(--accent)]"
+              >
+                Guardar
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBalanceDialog(false)}
+                className="type-body font-medium text-[var(--text-primary)]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -57,6 +57,8 @@ export const accountTabs = ["Cuentas de débito", "Tarjetas de crédito"] as con
 
 export const addAccountTypeOptions = ["Cheques", "Ahorro", "Efectivo"] as const;
 
+export type DebitAccountType = (typeof addAccountTypeOptions)[number];
+
 export type DebitAccountGroup = {
   title: string;
   total: string;
@@ -104,6 +106,7 @@ export type DebitAccountDetail = {
   slug: string;
   name: string;
   balance: string;
+  type: DebitAccountType;
   recentTransactions: DebitAccountTransaction[];
 };
 
@@ -112,6 +115,7 @@ export const debitAccountDetails: DebitAccountDetail[] = [
     slug: "falabella",
     name: "Falabella",
     balance: "$33.210",
+    type: "Cheques",
     recentTransactions: [
       {
         slug: "qweqweq",
@@ -254,12 +258,14 @@ export const debitAccountDetails: DebitAccountDetail[] = [
     slug: "mercado-pago",
     name: "Mercado Pago",
     balance: "$0",
+    type: "Cheques",
     recentTransactions: [],
   },
   {
     slug: "cash",
     name: "Cash",
     balance: "$0",
+    type: "Efectivo",
     recentTransactions: [],
   },
 ];
@@ -362,6 +368,14 @@ export function getDebitAccountDetail(accountSlug: string) {
 export function getDebitAccountTransaction(accountSlug: string, transactionSlug: string) {
   return getDebitAccountDetail(accountSlug)?.recentTransactions.find(
     (transaction) => transaction.slug === transactionSlug,
+  );
+}
+
+export type TransactionWithAccount = DebitAccountTransaction & { accountSlug: string };
+
+export function getAllDebitTransactions(): TransactionWithAccount[] {
+  return debitAccountDetails.flatMap((account) =>
+    account.recentTransactions.map((t) => ({ ...t, accountSlug: account.slug })),
   );
 }
 

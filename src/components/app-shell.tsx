@@ -29,6 +29,7 @@ import {
   House,
 } from "lucide-react";
 
+import { lockBodyScroll } from "@/lib/body-scroll-lock";
 import { accountQuickActionItems, quickActionItems } from "@/lib/mock-data";
 
 type Action = {
@@ -277,12 +278,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    return lockBodyScroll();
   }, [isFabMounted]);
 
   useEffect(() => {
@@ -304,8 +300,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [closeFabSheet, isFabMounted]);
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)] xl:flex">
-      <aside className="hidden min-h-dvh w-[240px] shrink-0 flex-col border-r border-[var(--line)] bg-[rgba(7,16,25,0.88)] px-3 py-7 xl:flex">
+    <div className="h-dvh overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] xl:flex">
+      <aside className="hidden w-[240px] shrink-0 flex-col border-r border-[var(--line)] bg-[rgba(7,16,25,0.88)] px-3 py-7 xl:flex xl:h-dvh xl:overflow-y-auto">
         <div className="mb-9 flex flex-col items-center">
           <div className="grid h-20 w-20 place-items-center rounded-[1.5rem] bg-gradient-to-br from-[#35c7ff] to-[#0b79ae] text-white shadow-[0_18px_40px_rgba(41,187,243,0.24)]">
             <div className="grid h-13 w-13 place-items-center rounded-full border-[3px] border-white/90">
@@ -342,7 +338,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-0 pt-4 md:max-w-[920px] md:px-6 lg:max-w-[1180px] lg:px-8 xl:mx-0 xl:max-w-none xl:flex-1 xl:px-6 xl:pb-6 xl:pt-4">
+      <div className="mx-auto flex h-full w-full max-w-[430px] flex-col px-4 pb-0 pt-4 md:max-w-[920px] md:px-6 lg:max-w-[1180px] lg:px-8 xl:mx-0 xl:max-w-none xl:flex-1 xl:px-6 xl:pt-4">
         <header className="mb-4 flex items-center justify-between xl:justify-end">
           <div className="h-10 w-10 xl:hidden" aria-hidden="true" />
           <div className="flex items-center gap-2">
@@ -370,11 +366,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 pb-6 xl:overflow-y-auto xl:pb-0">
+        <main className="flex-1 min-h-0 overflow-y-auto pb-6">
           <div className="w-full xl:px-2">{children}</div>
         </main>
 
-        <nav className="sticky bottom-0 z-20 -mx-4 mt-3 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 xl:hidden">
+        <nav className="z-20 -mx-4 mt-3 shrink-0 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 xl:hidden">
           <ul className="grid grid-cols-5 items-center gap-2">
             {navigationItems.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
