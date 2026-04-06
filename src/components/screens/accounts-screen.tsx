@@ -5,6 +5,7 @@ import { Banknote, CircleCheck, CreditCard } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { formatAmountCLP } from "@/lib/currency";
+import { dispatchBottomNoticeVisibility } from "@/lib/bottom-notice-events";
 import type { AccountType, CreditCard as CreditCardModel, DebitAccount } from "@/lib/models";
 import { accountTabs } from "@/lib/mock-data";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
@@ -47,8 +48,10 @@ function groupAccountsByType(accounts: DebitAccount[]): DebitGroup[] {
 export function AccountsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchQuery = searchParams.toString();
   const initialTab = searchParams.get("tab") === "credito" ? CREDIT_TAB : DEBIT_TAB;
   const [activeTab, setActiveTab] = useState<AccountTab>(initialTab);
+  const [bottomNotice, setBottomNotice] = useState<string | null>(null);
 
   const { accounts, isLoading: accountsLoading } = useDebitAccounts();
   const { cards, isLoading: cardsLoading } = useCreditCards();
@@ -56,6 +59,37 @@ export function AccountsScreen() {
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchQuery);
+    const deletedLabel = nextParams.get("deleted");
+
+    if (!deletedLabel) return;
+
+    const frame = window.setTimeout(() => {
+      setBottomNotice(`Eliminado ${deletedLabel}`);
+    }, 0);
+
+    router.replace(DEBIT_TAB_PATH, { scroll: false });
+
+    return () => window.clearTimeout(frame);
+  }, [router, searchQuery]);
+
+  useEffect(() => {
+    if (!bottomNotice) return;
+
+    const timer = window.setTimeout(() => setBottomNotice(null), 3200);
+
+    return () => window.clearTimeout(timer);
+  }, [bottomNotice]);
+
+  useEffect(() => {
+    dispatchBottomNoticeVisibility(Boolean(bottomNotice));
+
+    return () => {
+      dispatchBottomNoticeVisibility(false);
+    };
+  }, [bottomNotice]);
 
   useEffect(() => {
     router.prefetch("/cuentas/agregar");
@@ -85,6 +119,16 @@ export function AccountsScreen() {
 
   return (
     <div className="mx-auto w-full max-w-[540px] pt-5 md:max-w-[920px] lg:max-w-[1080px]">
+      {bottomNotice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="accounts-bottom-notice type-body fixed inset-x-0 bottom-[5.5rem] z-50 bg-[#f1efef] px-6 py-3 text-[#141414] shadow-[0_-12px_22px_rgba(0,0,0,0.18)] md:bottom-24 md:rounded-[1.1rem] md:px-5 xl:bottom-5"
+        >
+          <div className="mx-auto w-full">{bottomNotice}</div>
+        </div>
+      ) : null}
+
       <h1 className="type-page-title font-medium text-[var(--text-primary)]">Cuentas</h1>
 
       <div className="mt-8 border-b border-white/6">
@@ -166,7 +210,7 @@ function DebitAccountsPanel({
   }
 
   return (
-    <div className="mt-7 space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+    <div className="mt-7 space-y-5">
       {groups.map((group, index) => {
         const Icon = index === 0 ? CreditCard : Banknote;
 

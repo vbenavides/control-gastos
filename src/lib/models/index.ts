@@ -2,11 +2,14 @@
 
 export type AccountType = "Cheques" | "Ahorro" | "Efectivo";
 
+export type CurrencyCode = "CLP" | "USD";
+
 export type DebitAccount = {
   id: string;
   name: string;
   balance: number; // raw number, e.g. 33210
   type: AccountType;
+  currencyCode: CurrencyCode; // hoy CLP, luego CLP/USD
   createdAt: string; // ISO date
 };
 
@@ -18,6 +21,7 @@ export type CreditCard = {
   last4: string;
   balance: number; // deuda actual
   limit: number; // límite de crédito
+  currencyCode: CurrencyCode; // hoy CLP, luego CLP/USD
   interestRate: number; // tasa anual %
   statementDay: number; // día de corte (1-31)
   paymentDay: number; // día de pago (1-31)

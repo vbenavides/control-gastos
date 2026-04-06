@@ -6,9 +6,15 @@ import { ArrowLeft, ChevronDown, SquarePen, Trash2, Wallet } from "lucide-react"
 import { useEffect, useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
 import type { AccountType } from "@/lib/models";
 import { addAccountTypeOptions } from "@/lib/mock-data";
-import { formatAmountCLP } from "@/lib/currency";
+import {
+  getNumericInputWidth,
+  normalizeNumericBlurValue,
+  parseNumericInput,
+  sanitizeNumericInput,
+} from "@/lib/numeric-input";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 
 type ActiveDialog = "delete" | null;
@@ -27,6 +33,7 @@ export function EditDebitAccountScreen() {
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [bottomNotice, setBottomNotice] = useState<string | null>(null);
   const [description, setDescription] = useState("");
+  const [balance, setBalance] = useState("0");
   const [accountType, setAccountType] = useState<AccountType>("Cheques");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -34,6 +41,7 @@ export function EditDebitAccountScreen() {
   useEffect(() => {
     if (account) {
       setDescription(account.name);
+      setBalance(String(account.balance));
       setAccountType(account.type);
     }
   }, [account]);
@@ -47,7 +55,7 @@ export function EditDebitAccountScreen() {
   if (isLoading) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-8 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
           <div className="type-body flex flex-1 items-center justify-center text-[var(--text-secondary)]">
             Cargando…
           </div>
@@ -59,7 +67,7 @@ export function EditDebitAccountScreen() {
   if (!account) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-8 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
           <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
             <Link
               href="/cuentas?tab=debito"
@@ -84,6 +92,7 @@ export function EditDebitAccountScreen() {
   }
 
   const accountHref = `/cuentas/debito/${account.id}`;
+  const accountCurrencyCode = account.currencyCode ?? DEFAULT_CURRENCY_CODE;
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -91,6 +100,7 @@ export function EditDebitAccountScreen() {
     try {
       await update(account.id, {
         name: description.trim() || account.name,
+        balance: parseNumericInput(balance),
         type: accountType,
       });
       router.push(`${accountHref}?updated=1`);
@@ -117,7 +127,7 @@ export function EditDebitAccountScreen() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-28 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-28 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
           <Link
             href={accountHref}
@@ -144,8 +154,27 @@ export function EditDebitAccountScreen() {
 
         <section className="px-1 pt-8 text-center md:pt-10">
           <p className="type-label text-[var(--text-primary)]">Balance</p>
-          <p className="type-display mt-2 font-medium text-[var(--text-primary)]">
-            {formatAmountCLP(account.balance)}
+
+          <div className="type-display mt-2.5 flex items-baseline justify-center gap-[1px] font-medium text-[var(--text-primary)]">
+            <span aria-hidden="true">$</span>
+            <label htmlFor="edit-account-balance" className="sr-only">
+              Balance de la cuenta
+            </label>
+            <input
+              id="edit-account-balance"
+              name="balance"
+              type="text"
+              inputMode="numeric"
+              value={balance}
+              onChange={(event) => setBalance(sanitizeNumericInput(event.target.value, "integer"))}
+              onBlur={() => setBalance((current) => normalizeNumericBlurValue(current, "integer"))}
+              style={{ width: getNumericInputWidth(balance) }}
+              className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
+            />
+          </div>
+
+          <p className="type-helper mt-3 text-[var(--text-secondary)]">
+            Moneda activa: {accountCurrencyCode}. USD próximamente.
           </p>
         </section>
 

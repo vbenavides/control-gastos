@@ -30,6 +30,10 @@ import {
 } from "lucide-react";
 
 import { lockBodyScroll } from "@/lib/body-scroll-lock";
+import {
+  APP_BOTTOM_NOTICE_EVENT,
+  type BottomNoticeVisibilityDetail,
+} from "@/lib/bottom-notice-events";
 import { accountQuickActionItems, quickActionItems } from "@/lib/mock-data";
 
 type Action = {
@@ -84,6 +88,17 @@ function actionMap(pathname: string): Action[] {
   ];
 }
 
+const QUICK_ACTION_ROUTES: Record<string, string> = {
+  expense: "/agregar/gasto",
+  payment: "/agregar/pago",
+  income: "/agregar/ingreso",
+  transfer: "/agregar/transferencia",
+  refund: "/agregar/reembolso",
+  installments: "/agregar/compra-a-meses",
+  cardPayment: "/agregar/pago-tarjeta",
+  cashback: "/agregar/devolucion-efectivo",
+};
+
 function renderQuickActionIcon(kind: (typeof quickActionItems)[number]["kind"]) {
   switch (kind) {
     case "expense":
@@ -114,6 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [isFabMounted, setIsFabMounted] = useState(false);
   const [isFabVisible, setIsFabVisible] = useState(false);
   const [isDraggingSheet, setIsDraggingSheet] = useState(false);
+  const [hasBottomNotice, setHasBottomNotice] = useState(false);
   const [sheetStage, setSheetStage] = useState<SheetStage>("peek");
   const [sheetDragOffset, setSheetDragOffset] = useState(0);
   const actions = useMemo(() => actionMap(pathname), [pathname]);
@@ -298,9 +314,25 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [closeFabSheet, isFabMounted]);
 
+  useEffect(() => {
+    const handleBottomNoticeVisibility = (event: Event) => {
+      const customEvent = event as CustomEvent<BottomNoticeVisibilityDetail>;
+      setHasBottomNotice(Boolean(customEvent.detail?.visible));
+    };
+
+    window.addEventListener(APP_BOTTOM_NOTICE_EVENT, handleBottomNoticeVisibility as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        APP_BOTTOM_NOTICE_EVENT,
+        handleBottomNoticeVisibility as EventListener,
+      );
+    };
+  }, []);
+
   return (
-    <div className="h-dvh overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] xl:flex">
-      <aside className="hidden w-[240px] shrink-0 flex-col border-r border-[var(--line)] bg-[rgba(7,16,25,0.88)] px-3 py-7 xl:flex xl:h-dvh xl:overflow-y-auto">
+    <div className="h-dvh overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] lg:flex">
+      <aside className="hidden w-[240px] shrink-0 flex-col border-r border-[var(--line)] bg-[rgba(7,16,25,0.88)] px-3 py-7 lg:flex lg:h-dvh lg:overflow-y-auto">
         <div className="mb-9 flex flex-col items-center">
           <div className="grid h-20 w-20 place-items-center rounded-[1.5rem] bg-gradient-to-br from-[#35c7ff] to-[#0b79ae] text-white shadow-[0_18px_40px_rgba(41,187,243,0.24)]">
             <div className="grid h-13 w-13 place-items-center rounded-full border-[3px] border-white/90">
@@ -335,9 +367,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="mx-auto flex h-full w-full max-w-[430px] flex-col px-4 pb-0 pt-4 md:max-w-[920px] md:px-6 lg:max-w-[1180px] lg:px-8 xl:mx-0 xl:max-w-none xl:flex-1 xl:px-6 xl:pt-4">
-        <header className="mb-4 flex items-center justify-between xl:justify-end">
-          <div className="h-10 w-10 xl:hidden" aria-hidden="true" />
+      <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 pb-0 pt-4 sm:max-w-[680px] sm:px-5 md:max-w-[920px] md:px-6 lg:mx-0 lg:max-w-none lg:flex-1 lg:px-6 lg:pt-5 xl:px-8">
+        <header className="mb-4 flex items-center justify-between lg:justify-end">
+          <div className="h-10 w-10 lg:hidden" aria-hidden="true" />
           <div className="flex items-center gap-2">
             {actions.map((action) => {
               const content = (
@@ -363,11 +395,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 overflow-y-auto pb-6">
-          <div className="w-full xl:px-2">{children}</div>
+        <main className="scroll-safe-edge flex-1 min-h-0 overflow-y-auto pb-6">
+          <div className="w-full lg:px-2">{children}</div>
         </main>
 
-        <nav className="z-20 -mx-4 mt-3 shrink-0 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 xl:hidden">
+        <nav className="z-20 -mx-4 mt-3 shrink-0 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 lg:hidden sm:-mx-5 md:-mx-6">
           <ul className="grid grid-cols-5 items-center gap-2">
             {navigationItems.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
@@ -394,7 +426,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </div>
 
-      <div className="fixed bottom-20 right-4 z-30 md:right-6 lg:right-8 xl:bottom-5 xl:right-6">
+      <div
+        className="fixed bottom-20 right-4 z-30 transition-transform duration-300 ease-out md:right-6 lg:bottom-5 lg:right-6 xl:right-8"
+        style={{ transform: hasBottomNotice ? "translateY(-4.75rem)" : "translateY(0)" }}
+      >
         <button
           type="button"
           aria-label="Agregar nueva acción"
@@ -423,11 +458,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-modal="true"
             aria-labelledby="quick-actions-title"
             onWheel={handleSheetWheel}
-            onPointerDown={handleSheetPointerDown}
-            onPointerMove={handleSheetPointerMove}
-            onPointerUp={handleSheetPointerEnd}
-            onPointerCancel={handleSheetPointerEnd}
-            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-8 xl:inset-x-auto xl:bottom-5 xl:right-6 xl:w-[32rem] xl:rounded-[2rem]"
+            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-auto lg:bottom-5 lg:right-6 lg:h-[min(90svh,48rem)] lg:w-[32rem] lg:rounded-[2rem] xl:right-8"
             style={{
               opacity: isFabVisible ? 1 : 0.96,
               transform: `translate3d(0, ${sheetTranslateY}, 0)`,
@@ -435,7 +466,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               userSelect: isDraggingSheet ? "none" : undefined,
             }}
           >
-            <div className="border-b border-white/7 px-4 pb-4 pt-3 md:px-5">
+            <div
+              className="border-b border-white/7 px-4 pb-4 pt-3 md:px-5"
+              onPointerDown={handleSheetPointerDown}
+              onPointerMove={handleSheetPointerMove}
+              onPointerUp={handleSheetPointerEnd}
+              onPointerCancel={handleSheetPointerEnd}
+            >
               <div className="mx-auto mb-4 h-[0.32rem] w-14 rounded-full bg-white/92" />
               <h3
                 id="quick-actions-title"
@@ -445,10 +482,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               </h3>
             </div>
 
-            <ul className="flex-1 overflow-y-auto pb-6">
-              {visibleQuickActions.map((item) => (
-                <li key={item.id} className="border-b border-white/7 last:border-b-0">
-                  <div className="flex w-full items-center gap-3 px-4 py-3.5 md:px-5 md:py-4">
+            <ul className="scroll-safe-edge flex-1 overflow-y-auto pb-6">
+              {visibleQuickActions.map((item) => {
+                const href = QUICK_ACTION_ROUTES[item.kind];
+                const content = (
+                  <>
                     <div className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-[0.95rem] bg-white/[0.055] text-white/92 md:h-12 md:w-12">
                       {renderQuickActionIcon(item.kind)}
                     </div>
@@ -461,9 +499,34 @@ export function AppShell({ children }: { children: ReactNode }) {
                         {item.description}
                       </p>
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </>
+                );
+
+                return (
+                  <li key={item.id} className="border-b border-white/7 last:border-b-0">
+                    {href ? (
+                      <Link
+                        href={href}
+                        prefetch={true}
+                        onClick={closeFabSheet}
+                        className="flex w-full items-center gap-3 px-4 py-3.5 transition hover:bg-white/[0.03] active:bg-white/[0.05] md:px-5 md:py-4"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeFabSheet();
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05] md:px-5 md:py-4"
+                      >
+                        {content}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>

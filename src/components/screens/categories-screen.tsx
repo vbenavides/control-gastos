@@ -29,6 +29,16 @@ export function CategoriesScreen() {
     return map;
   }, [transactions, currentMonth, currentYear]);
 
+  const countByCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    (transactions ?? []).forEach((t) => {
+      const d = new Date(t.date);
+      if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return;
+      map.set(t.category, (map.get(t.category) ?? 0) + 1);
+    });
+    return map;
+  }, [transactions, currentMonth, currentYear]);
+
   const totalBudget = useMemo(
     () => (categories ?? []).reduce((sum, c) => sum + c.budget, 0),
     [categories],
@@ -92,7 +102,9 @@ export function CategoriesScreen() {
         <div className="flex items-end justify-between">
           <div>
             <p className="type-body-strong font-semibold">Sin grupo</p>
-            <p className="type-body mt-1 text-[var(--text-secondary)]">0 transacciones</p>
+            <p className="type-body mt-1 text-[var(--text-secondary)]">
+              {Array.from(countByCategory.values()).reduce((s, v) => s + v, 0)} transacciones
+            </p>
           </div>
           <div className="text-right">
             <p className="type-display font-semibold">$0</p>
@@ -108,7 +120,7 @@ export function CategoriesScreen() {
           No hay categorías todavía.
         </div>
       ) : (
-        <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+        <div className="space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
           {(categories ?? []).map((category, index) => {
             const Icon = CATEGORY_ICONS[index % CATEGORY_ICONS.length] ?? BookOpen;
             const spent = spentByCategory.get(category.name) ?? 0;
@@ -133,7 +145,9 @@ export function CategoriesScreen() {
                         <p className="type-body-strong font-medium text-[var(--text-primary)]">
                           {category.name}
                         </p>
-                        <p className="type-label text-[var(--text-secondary)]">0 transacciones</p>
+                        <p className="type-label text-[var(--text-secondary)]">
+                          {countByCategory.get(category.name) ?? 0} transacciones
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="type-body-strong font-medium text-[var(--text-primary)]">

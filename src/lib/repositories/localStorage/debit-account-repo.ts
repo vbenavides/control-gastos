@@ -1,14 +1,26 @@
-import type { DebitAccount } from "@/lib/models";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
+import type { CurrencyCode, DebitAccount } from "@/lib/models";
 import type { IDebitAccountRepository } from "@/lib/repositories/interfaces";
 
 const STORAGE_KEY = "cgapp_debit_accounts_v1";
+
+type StoredDebitAccount = Omit<DebitAccount, "currencyCode"> & {
+  currencyCode?: CurrencyCode;
+};
+
+function normalizeAccount(account: StoredDebitAccount): DebitAccount {
+  return {
+    ...account,
+    currencyCode: account.currencyCode ?? DEFAULT_CURRENCY_CODE,
+  };
+}
 
 function readAll(): DebitAccount[] {
   if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
   try {
-    return JSON.parse(raw) as DebitAccount[];
+    return (JSON.parse(raw) as StoredDebitAccount[]).map(normalizeAccount);
   } catch {
     return [];
   }

@@ -39,7 +39,7 @@ function renderQuickActionIcon(kind: (typeof accountQuickActionItems)[number]["k
   }
 }
 
-export function AccountQuickActionsFab() {
+export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomNotice?: boolean }) {
   const closeTimeoutRef = useRef<number | null>(null);
   const gestureStartYRef = useRef<number | null>(null);
   const gestureDeltaYRef = useRef(0);
@@ -233,7 +233,10 @@ export function AccountQuickActionsFab() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-4 z-30 md:right-6 lg:right-8 xl:bottom-5 xl:right-6">
+      <div
+        className="fixed bottom-6 right-4 z-30 transition-transform duration-300 ease-out md:right-6 lg:right-8 xl:bottom-5 xl:right-6"
+        style={{ transform: hasBottomNotice ? "translateY(-3.5rem)" : "translateY(0)" }}
+      >
         <button
           type="button"
           aria-label="Agregar nueva acción"
@@ -284,7 +287,7 @@ export function AccountQuickActionsFab() {
               </h3>
             </div>
 
-            <ul className="flex-1 overflow-y-auto pb-6">
+            <ul className="scroll-safe-edge flex-1 overflow-y-auto pb-6">
               {quickActions.map((item) => (
                 <li key={item.id} className="border-b border-white/7 last:border-b-0">
                   <button

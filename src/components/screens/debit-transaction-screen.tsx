@@ -31,7 +31,7 @@ export function DebitTransactionScreen() {
     typeof params.transactionSlug === "string" ? params.transactionSlug : "";
 
   const { accounts, isLoading: accountsLoading } = useDebitAccounts();
-  const { transactions, isLoading: txLoading, update, remove } = useTransactions();
+  const { transactions, isLoading: txLoading, remove } = useTransactions();
 
   const account = useMemo(
     () => (accounts ?? []).find((a) => a.id === accountId) ?? null,
@@ -43,10 +43,8 @@ export function DebitTransactionScreen() {
   );
 
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Campos del formulario inicializados desde el transaction
-  const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
@@ -55,7 +53,6 @@ export function DebitTransactionScreen() {
 
   useEffect(() => {
     if (transaction) {
-      setAmount(String(transaction.amount));
       setDescription(transaction.description);
       setTransactionDate(transaction.date);
       setPaymentDate(transaction.paymentDate);
@@ -63,24 +60,6 @@ export function DebitTransactionScreen() {
       setNote(transaction.note ?? "");
     }
   }, [transaction]);
-
-  const handleSave = async () => {
-    if (!transaction || isSaving) return;
-    setIsSaving(true);
-    try {
-      await update(transaction.id, {
-        amount: parseFloat(amount.replace(",", ".")) || transaction.amount,
-        description: description.trim() || transaction.description,
-        date: transactionDate || transaction.date,
-        paymentDate: paymentDate || transaction.paymentDate,
-        category: category.trim() || transaction.category,
-        note: note.trim() || undefined,
-      });
-      router.push(`/cuentas/debito/${accountId}?updated=1`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!transaction) return;
@@ -103,7 +82,7 @@ export function DebitTransactionScreen() {
   if (!account || !transaction) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-8 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
           <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
             <Link
               href="/cuentas?tab=debito"
@@ -128,7 +107,7 @@ export function DebitTransactionScreen() {
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-28 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-28 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
           <button
             type="button"
@@ -218,16 +197,8 @@ export function DebitTransactionScreen() {
         <div className="mx-auto flex w-full gap-3">
           <button
             type="button"
-            disabled={isSaving}
-            onClick={handleSave}
-            className="flex h-12 flex-1 items-center justify-center rounded-[0.9rem] bg-[var(--accent)] text-[1rem] font-medium text-white disabled:opacity-60"
-          >
-            {isSaving ? "Guardando…" : "Guardar"}
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveDialog("undo")}
-            className="flex h-12 flex-1 items-center justify-center rounded-[0.9rem] bg-[#16485c] px-6 text-[1rem] font-medium text-[var(--accent)]"
+            className="flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[#16485c] px-6 text-[1rem] font-medium text-[var(--accent)]"
           >
             Deshacer Pago
           </button>

@@ -51,7 +51,7 @@ export function AllTransactionsScreen() {
   if (!account) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-8 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
           <header className="flex items-center justify-between pt-1">
             <Link
               href="/cuentas?tab=debito"
@@ -72,7 +72,7 @@ export function AllTransactionsScreen() {
 
   return (
     <div className="flex h-dvh flex-col bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col md:max-w-[860px] lg:max-w-[1160px] xl:max-w-[1280px]">
+      <div className="mx-auto flex h-dvh w-full max-w-[36rem] flex-col md:max-w-[860px] lg:max-w-[1160px] xl:max-w-[1280px]">
         {/* ── Top navigation bar ── */}
         <header className="shrink-0 px-4 pt-3 md:px-6 lg:px-8">
           <div className="flex items-center justify-between">
@@ -139,7 +139,7 @@ export function AllTransactionsScreen() {
         </header>
 
         {/* ── Scrollable body ── */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6 lg:px-8">
+        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6 lg:px-8">
           <div className="flex items-center justify-between py-3">
             <span className="type-body text-[var(--text-secondary)]">Gastos</span>
             <span className="type-body font-medium text-[var(--text-primary)]">

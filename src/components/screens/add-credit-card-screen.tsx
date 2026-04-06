@@ -16,6 +16,13 @@ import {
 import type { HTMLAttributes, ReactNode } from "react";
 import { useState } from "react";
 
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
+import {
+  getNumericInputWidth,
+  normalizeNumericBlurValue,
+  parseNumericInput,
+  sanitizeNumericInput,
+} from "@/lib/numeric-input";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 
 export function AddCreditCardScreen() {
@@ -32,6 +39,7 @@ export function AddCreditCardScreen() {
   const [gracePeriodDays, setGracePeriodDays] = useState("10");
   const [paymentReminderEnabled, setPaymentReminderEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const currencyCode = DEFAULT_CURRENCY_CODE;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -42,9 +50,10 @@ export function AddCreditCardScreen() {
       await create({
         name: description.trim() || "Sin nombre",
         last4: lastFourDigits.slice(0, 4),
-        balance: parseFloat(balance.replace(",", ".")) || 0,
-        limit: parseFloat(creditLimit.replace(",", ".")) || 0,
-        interestRate: parseFloat(annualInterestRate.replace(",", ".")) || 0,
+        balance: parseNumericInput(balance),
+        limit: parseNumericInput(creditLimit),
+        currencyCode,
+        interestRate: parseNumericInput(annualInterestRate),
         statementDay: parseInt(statementDay, 10) || 1,
         paymentDay: parseInt(paymentDay, 10) || 1,
         gracePeriodDays: parseInt(gracePeriodDays, 10) || 10,
@@ -58,7 +67,7 @@ export function AddCreditCardScreen() {
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-4 pt-3 md:max-w-[560px] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
           <Link
             href="/cuentas?tab=credito"
@@ -88,18 +97,19 @@ export function AddCreditCardScreen() {
               <input
                 id="credit-card-balance"
                 name="balance"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="numeric"
                 value={balance}
-                onChange={(event) => setBalance(event.target.value)}
-                onBlur={() => {
-                  if (balance.trim() === "") setBalance("0");
-                }}
-                className="w-[2.3ch] border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                onChange={(event) => setBalance(sanitizeNumericInput(event.target.value, "integer"))}
+                onBlur={() => setBalance((current) => normalizeNumericBlurValue(current, "integer"))}
+                style={{ width: getNumericInputWidth(balance) }}
+                className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
               />
             </div>
+
+            <p className="type-helper mt-3 text-[var(--text-secondary)]">
+              CLP activo por ahora · USD próximamente.
+            </p>
           </section>
 
           <section className="mt-10 space-y-0">
@@ -131,6 +141,7 @@ export function AddCreditCardScreen() {
                 prefix="$"
                 value={creditLimit}
                 onChange={setCreditLimit}
+                mode="integer"
               />
             </FormField>
 
@@ -144,6 +155,7 @@ export function AddCreditCardScreen() {
                 icon={<Percent size={16} className="shrink-0 text-white/92" />}
                 value={annualInterestRate}
                 onChange={setAnnualInterestRate}
+                mode="decimal"
               />
             </FormField>
 
@@ -298,12 +310,14 @@ function InlineAmountInput({
   prefix,
   value,
   onChange,
+  mode = "integer",
 }: Readonly<{
   id: string;
   icon: ReactNode;
   prefix?: string;
   value: string;
   onChange: (value: string) => void;
+  mode?: "integer" | "decimal";
 }>) {
   return (
     <div className="flex items-center gap-3 text-[var(--text-primary)]">
@@ -313,10 +327,12 @@ function InlineAmountInput({
         <input
           id={id}
           type="text"
-          inputMode="decimal"
+          inputMode={mode === "decimal" ? "decimal" : "numeric"}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="type-body w-[5ch] border-0 bg-transparent p-0 outline-none placeholder:text-[var(--text-secondary)]"
+          onChange={(event) => onChange(sanitizeNumericInput(event.target.value, mode))}
+          onBlur={() => onChange(normalizeNumericBlurValue(value, mode))}
+          style={{ width: getNumericInputWidth(value, 4) }}
+          className="type-body min-w-[4ch] max-w-full border-0 bg-transparent p-0 outline-none placeholder:text-[var(--text-secondary)]"
         />
       </div>
     </div>

@@ -1,7 +1,7 @@
 export default function DebitAccountLoading() {
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col px-4 pb-0 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+      <div className="mx-auto flex h-dvh w-full max-w-[36rem] flex-col px-4 pb-0 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
         <div className="h-14 shrink-0 border-b border-white/[0.06]" />
         <div className="flex-1 animate-pulse pb-24 pt-8">
           <div className="mx-auto h-4 w-20 rounded-full bg-white/8" />

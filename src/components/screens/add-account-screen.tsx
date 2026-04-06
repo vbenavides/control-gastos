@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, SquarePen, Wallet } from "lucide-react";
 import { useState } from "react";
 
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
 import type { AccountType } from "@/lib/models";
 import { addAccountTypeOptions } from "@/lib/mock-data";
+import {
+  getNumericInputWidth,
+  normalizeNumericBlurValue,
+  parseNumericInput,
+  sanitizeNumericInput,
+} from "@/lib/numeric-input";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 
 export function AddAccountScreen() {
@@ -17,17 +24,23 @@ export function AddAccountScreen() {
   const [description, setDescription] = useState("");
   const [accountType, setAccountType] = useState<AccountType>("Cheques");
   const [isSaving, setIsSaving] = useState(false);
+  const currencyCode = DEFAULT_CURRENCY_CODE;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (isSaving) return;
 
-    const balance = parseFloat(amount.replace(",", ".")) || 0;
+    const balance = parseNumericInput(amount);
     const name = description.trim() || "Sin nombre";
 
     setIsSaving(true);
     try {
-      const account = await create({ name, balance, type: accountType });
+      const account = await create({
+        name,
+        balance,
+        type: accountType,
+        currencyCode,
+      });
       router.push(`/cuentas/debito/${account.id}`);
     } finally {
       setIsSaving(false);
@@ -36,7 +49,7 @@ export function AddAccountScreen() {
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-4 pt-3 md:max-w-[560px] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
           <Link
             href="/cuentas?tab=debito"
@@ -66,23 +79,19 @@ export function AddAccountScreen() {
               <input
                 id="amount"
                 name="amount"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="numeric"
                 value={amount}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setAmount(nextValue === "" ? "" : nextValue);
-                }}
-                onBlur={() => {
-                  if (amount.trim() === "") {
-                    setAmount("0");
-                  }
-                }}
-                className="w-[2.3ch] border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                onChange={(event) => setAmount(sanitizeNumericInput(event.target.value, "integer"))}
+                onBlur={() => setAmount((current) => normalizeNumericBlurValue(current, "integer"))}
+                style={{ width: getNumericInputWidth(amount) }}
+                className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
               />
             </div>
+
+            <p className="type-helper mt-3 text-[var(--text-secondary)]">
+              CLP activo por ahora · USD próximamente.
+            </p>
           </section>
 
           <section className="mt-10 space-y-0">

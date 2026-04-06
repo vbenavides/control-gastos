@@ -117,18 +117,24 @@ export function ProgressBar({
 export function CircularProgress({
   value,
   center,
+  className = "",
+  innerClassName = "",
 }: {
   value: number;
   center: ReactNode;
+  className?: string;
+  innerClassName?: string;
 }) {
   return (
     <div
-      className="relative grid h-20 w-20 place-items-center rounded-full"
+      className={`relative grid h-20 w-20 place-items-center rounded-full ${className}`}
       style={{
         background: `conic-gradient(var(--accent) ${value}%, rgba(255,255,255,0.1) ${value}% 100%)`,
       }}
     >
-      <div className="grid h-[5rem] w-[5rem] place-items-center rounded-full bg-[var(--surface)] text-sm font-semibold text-[var(--text-primary)]">
+      <div
+        className={`grid h-[4.25rem] w-[4.25rem] place-items-center rounded-full bg-[var(--surface)] text-sm font-semibold text-[var(--text-primary)] ${innerClassName}`}
+      >
         {center}
       </div>
     </div>

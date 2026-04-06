@@ -1,14 +1,26 @@
-import type { CreditCard } from "@/lib/models";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
+import type { CreditCard, CurrencyCode } from "@/lib/models";
 import type { ICreditCardRepository } from "@/lib/repositories/interfaces";
 
 const STORAGE_KEY = "cgapp_credit_cards_v1";
+
+type StoredCreditCard = Omit<CreditCard, "currencyCode"> & {
+  currencyCode?: CurrencyCode;
+};
+
+function normalizeCard(card: StoredCreditCard): CreditCard {
+  return {
+    ...card,
+    currencyCode: card.currencyCode ?? DEFAULT_CURRENCY_CODE,
+  };
+}
 
 function readAll(): CreditCard[] {
   if (typeof window === "undefined") return [];
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
   try {
-    return JSON.parse(raw) as CreditCard[];
+    return (JSON.parse(raw) as StoredCreditCard[]).map(normalizeCard);
   } catch {
     return [];
   }

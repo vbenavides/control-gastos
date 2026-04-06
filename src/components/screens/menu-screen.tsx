@@ -24,7 +24,7 @@ export function MenuScreen() {
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto w-full max-w-[430px] px-4 pb-10 pt-4 md:max-w-[920px] md:px-6 lg:max-w-[1120px] lg:px-8 lg:pt-6">
+      <div className="mx-auto w-full max-w-[36rem] px-4 pb-10 pt-4 sm:max-w-[680px] sm:px-5 md:max-w-[920px] md:px-6 lg:max-w-[1120px] lg:px-8 lg:pt-6">
         <header className="mb-8 flex items-center">
           <Link href="/" aria-label="Volver" className="grid h-11 w-11 place-items-center rounded-2xl text-white">
             <ArrowLeft size={24} />
@@ -40,13 +40,13 @@ export function MenuScreen() {
           <p className="mt-6 text-[1.1rem] text-[var(--text-secondary)]">✉ hello@nekomoney.app</p>
         </div>
 
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:gap-6">
+        <div className="md:grid md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] md:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
           <div>
             <MenuBlock title="GENERAL" items={menuSections.general} icons={generalIcons} />
             <MenuBlock title="HERRAMIENTAS DE DATOS" items={menuSections.tools} icons={toolIcons} />
           </div>
 
-          <section className="mt-8 lg:mt-0 lg:pt-[3.25rem]">
+          <section className="mt-8 md:mt-0 md:pt-[3.25rem]">
             <p className="mb-4 text-sm font-semibold tracking-[0.12em] text-[var(--text-primary)]">PREFERENCIAS</p>
             <SurfaceCard className="overflow-hidden">
               <div className="border-b border-[var(--line)] px-4 py-4">

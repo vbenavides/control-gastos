@@ -16,9 +16,14 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccountQuickActionsFab } from "@/components/account-quick-actions-fab";
-import { formatAmountCLP } from "@/lib/currency";
+import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
 import type { Transaction, TransactionIconKind } from "@/lib/models";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
+import {
+  normalizeNumericBlurValue,
+  parseNumericInput,
+  sanitizeNumericInput,
+} from "@/lib/numeric-input";
 import { useTransactions } from "@/lib/hooks/use-transactions";
 
 type TopNotice = {
@@ -88,7 +93,7 @@ export function DebitAccountScreen() {
 
   const handleSaveBalance = useCallback(async () => {
     if (!account) return;
-    const parsed = parseFloat(balanceInputValue.replace(",", ".")) || 0;
+    const parsed = parseNumericInput(balanceInputValue);
     await updateAccount(account.id, { balance: parsed });
     setShowBalanceDialog(false);
     setTopNotice({
@@ -162,7 +167,7 @@ export function DebitAccountScreen() {
   if (accountsLoading) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center px-4">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
           <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
         </div>
       </div>
@@ -173,7 +178,7 @@ export function DebitAccountScreen() {
   if (!account) {
     return (
       <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-4 pb-8 pt-3 md:max-w-[560px] md:px-6 lg:max-w-[680px] lg:px-8">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
           <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
             <Link
               href="/cuentas?tab=debito"
@@ -221,7 +226,7 @@ export function DebitAccountScreen() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex h-dvh w-full max-w-[430px] flex-col px-4 pb-0 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+      <div className="mx-auto flex h-dvh w-full max-w-[36rem] flex-col px-4 pb-0 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
         <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
           <Link
             href="/cuentas?tab=debito"
@@ -246,7 +251,7 @@ export function DebitAccountScreen() {
           </Link>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pb-24">
+        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto pb-24">
           <section className="px-1 pt-8 text-center md:pt-10">
             <p className="type-body text-[var(--text-primary)]">Balance</p>
             <p className="type-display mt-1 font-medium text-[var(--text-primary)]">
@@ -333,7 +338,7 @@ export function DebitAccountScreen() {
         </div>
       </div>
 
-      <AccountQuickActionsFab />
+      <AccountQuickActionsFab hasBottomNotice={!!bottomNotice} />
 
       {showBalanceDialog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
@@ -364,12 +369,21 @@ export function DebitAccountScreen() {
               <input
                 id="balance-input"
                 type="text"
-                inputMode="decimal"
+                inputMode="numeric"
                 autoFocus
                 value={balanceInputValue}
-                onChange={(event) => setBalanceInputValue(event.target.value)}
+                onChange={(event) =>
+                  setBalanceInputValue(sanitizeNumericInput(event.target.value, "integer"))
+                }
+                onBlur={() =>
+                  setBalanceInputValue((current) => normalizeNumericBlurValue(current, "integer"))
+                }
                 className="type-body mt-3 w-full rounded-[0.75rem] border border-white/12 bg-white/[0.04] px-4 py-3 text-center text-[var(--text-primary)] outline-none transition focus:border-[var(--accent)] focus:bg-white/[0.06]"
               />
+
+              <p className="type-helper mt-3 text-center text-[var(--text-secondary)]">
+                Moneda activa: {account.currencyCode ?? DEFAULT_CURRENCY_CODE}. USD próximamente.
+              </p>
             </div>
 
             <div className="mt-6 flex items-center gap-6">
