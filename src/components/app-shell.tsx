@@ -19,7 +19,7 @@ import {
   ListChecks,
   Menu,
   Pencil,
-  PieChart,
+  BarChart3,
   Plus,
   ReceiptText,
   RotateCcw,
@@ -53,7 +53,7 @@ const FAB_SHEET_PEEK_OFFSET = "30svh";
 const navigationItems = [
   { href: "/", label: "Inicio", icon: House },
   { href: "/calendario", label: "Calendario", icon: CalendarDays },
-  { href: "/categorias", label: "Categorías", icon: PieChart },
+  { href: "/categorias", label: "Presupuesto", icon: BarChart3 },
   { href: "/cuentas", label: "Cuentas", icon: Wallet },
   { href: "/historial", label: "Historial", icon: History },
 ] as const;
@@ -70,7 +70,7 @@ function actionMap(pathname: string): Action[] {
     return [
       { label: "Ordenar", icon: <ArrowUpDown size={20} strokeWidth={2} /> },
       { label: "Carpetas", icon: <FolderOpen size={20} strokeWidth={2} /> },
-      { label: "Editar", icon: <Pencil size={20} strokeWidth={2} /> },
+      { label: "Editar presupuesto", icon: <Pencil size={20} strokeWidth={2} />, href: "/presupuesto/configurar" },
       { label: "Menú", icon: <Menu size={22} strokeWidth={2} />, href: "/menu" },
     ];
   }
@@ -179,9 +179,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.clearTimeout(closeTimeoutRef.current);
     }
 
+    // On desktop (lg = 1024px+) open fully expanded — no peek needed
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+
     setIsDraggingSheet(false);
     setSheetDragOffset(0);
-    setSheetStage("peek");
+    setSheetStage(isDesktop ? "full" : "peek");
     setIsFabMounted(true);
 
     window.requestAnimationFrame(() => {
@@ -224,6 +227,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     gestureDeltaYRef.current = 0;
     setIsDraggingSheet(true);
     event.currentTarget.setPointerCapture(event.pointerId);
+    event.stopPropagation();
   }, []);
 
   const handleSheetPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
@@ -411,12 +415,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                     aria-label={label}
                     className="flex h-11 items-center justify-center rounded-2xl py-1 text-xs text-[var(--text-secondary)] transition"
                   >
-                    <Icon
-                      size={22}
-                      strokeWidth={2.1}
-                      className={isActive ? "text-[var(--accent)]" : "text-white/68"}
-                      fill={href === "/categorias" && isActive ? "currentColor" : "none"}
-                    />
+                     <Icon
+                       size={22}
+                       strokeWidth={2.1}
+                       className={isActive ? "text-[var(--accent)]" : "text-white/68"}
+                     />
                     <span className="sr-only">{label}</span>
                   </Link>
                 </li>
@@ -458,7 +461,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-modal="true"
             aria-labelledby="quick-actions-title"
             onWheel={handleSheetWheel}
-            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-auto lg:bottom-5 lg:right-6 lg:h-[min(90svh,48rem)] lg:w-[32rem] lg:rounded-[2rem] xl:right-8"
+            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-auto lg:bottom-5 lg:right-6 lg:h-auto lg:max-h-[92svh] lg:w-[32rem] lg:rounded-[2rem] xl:right-8"
             style={{
               opacity: isFabVisible ? 1 : 0.96,
               transform: `translate3d(0, ${sheetTranslateY}, 0)`,
@@ -473,7 +476,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               onPointerUp={handleSheetPointerEnd}
               onPointerCancel={handleSheetPointerEnd}
             >
-              <div className="mx-auto mb-4 h-[0.32rem] w-14 rounded-full bg-white/92" />
+              <div className="mx-auto mb-4 h-[0.32rem] w-14 rounded-full bg-white/92 lg:hidden" />
               <h3
                 id="quick-actions-title"
                 className="type-section-title font-medium text-[var(--text-primary)]"
@@ -482,7 +485,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </h3>
             </div>
 
-            <ul className="scroll-safe-edge flex-1 overflow-y-auto pb-6">
+            <ul className="scroll-safe-edge flex-1 overflow-y-auto pb-6 lg:flex-none lg:overflow-y-visible">
               {visibleQuickActions.map((item) => {
                 const href = QUICK_ACTION_ROUTES[item.kind];
                 const content = (

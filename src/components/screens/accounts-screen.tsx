@@ -13,7 +13,7 @@ import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 
 type AccountTab = (typeof accountTabs)[number];
 
-const DEBIT_TAB = "Cuentas de débito" as const;
+const DEBIT_TAB = "Cuentas" as const;
 const CREDIT_TAB = "Tarjetas de crédito" as const;
 const DEBIT_TAB_PATH = "/cuentas?tab=debito";
 const CREDIT_TAB_PATH = "/cuentas?tab=credito";
@@ -27,7 +27,7 @@ type DebitGroup = {
 };
 
 function groupAccountsByType(accounts: DebitAccount[]): DebitGroup[] {
-  const order: AccountType[] = ["Cheques", "Ahorro", "Efectivo"];
+  const order: AccountType[] = ["Corriente", "Ahorro", "Efectivo", "Débito"];
   const map = new Map<AccountType, DebitAccount[]>();
 
   for (const account of accounts) {
@@ -204,7 +204,7 @@ function DebitAccountsPanel({
   if (groups.length === 0) {
     return (
       <div className="mt-10 type-body rounded-[1rem] border border-white/8 bg-[var(--surface)] px-4 py-6 text-center text-[var(--text-secondary)]">
-        No tenés cuentas de débito todavía. ¡Agregá una!
+        No tenés cuentas todavía. ¡Agregá una!
       </div>
     );
   }

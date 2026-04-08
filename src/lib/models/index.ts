@@ -1,6 +1,6 @@
 // ─── Cuenta de débito ───────────────────────────────────────────────────────
 
-export type AccountType = "Cheques" | "Ahorro" | "Efectivo";
+export type AccountType = "Corriente" | "Ahorro" | "Efectivo" | "Débito";
 
 export type CurrencyCode = "CLP" | "USD";
 
@@ -68,9 +68,22 @@ export type Transaction = {
 
 // ─── Categoría ──────────────────────────────────────────────────────────────
 
+export type CategoryType = "expense" | "income";
+
+// ─── Configuración de presupuesto ────────────────────────────────────────────
+
+export type BudgetSettings = {
+  resetDay: number;           // día del mes (1-31)
+  includeScheduledTx: boolean;
+  monthlyBudgetEnabled: boolean;
+  monthlyBudget: number;      // monto mensual total (CLP)
+};
+
 export type Category = {
   id: string;
   name: string;
-  budget: number; // presupuesto asignado
-  accent: string; // CSS color token o hex
+  budget: number;  // presupuesto asignado (CLP)
+  accent: string;  // hex color, e.g. "#22c55e"
+  iconKey?: string; // key en CATEGORY_ICON_MAP, e.g. "graduation-cap"
+  type?: CategoryType; // "expense" | "income" — opcional para compat. con datos previos
 };

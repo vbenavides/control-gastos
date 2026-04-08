@@ -24,8 +24,8 @@ export function MenuScreen() {
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto w-full max-w-[36rem] px-4 pb-10 pt-4 sm:max-w-[680px] sm:px-5 md:max-w-[920px] md:px-6 lg:max-w-[1120px] lg:px-8 lg:pt-6">
-        <header className="mb-8 flex items-center">
+      <div className="mx-auto w-full max-w-[36rem] px-4 pb-10 sm:max-w-[680px] sm:px-5 md:max-w-[920px] md:px-6 lg:max-w-[1120px] lg:px-8">
+        <header className="sticky top-0 z-10 mb-8 flex items-center bg-[var(--app-bg)] pt-4 lg:pt-6">
           <Link href="/" aria-label="Volver" className="grid h-11 w-11 place-items-center rounded-2xl text-white">
             <ArrowLeft size={24} />
           </Link>
@@ -42,8 +42,17 @@ export function MenuScreen() {
 
         <div className="md:grid md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] md:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
           <div>
-            <MenuBlock title="GENERAL" items={menuSections.general} icons={generalIcons} />
-            <MenuBlock title="HERRAMIENTAS DE DATOS" items={menuSections.tools} icons={toolIcons} />
+            <MenuBlock
+              title="GENERAL"
+              items={menuSections.general}
+              icons={generalIcons}
+              hrefs={["/gestion/categorias", null, null, null]}
+            />
+            <MenuBlock
+              title="HERRAMIENTAS DE DATOS"
+              items={menuSections.tools}
+              icons={toolIcons}
+            />
           </div>
 
           <section className="mt-8 md:mt-0 md:pt-[3.25rem]">
@@ -83,14 +92,19 @@ export function MenuScreen() {
   );
 }
 
+const MENU_ITEM_CLASS =
+  "flex w-full items-center gap-4 px-4 py-4 text-left transition hover:bg-white/[0.03]";
+
 function MenuBlock({
   title,
   items,
   icons,
+  hrefs = [],
 }: {
   title: string;
   items: string[];
   icons: Array<typeof ListOrdered>;
+  hrefs?: (string | null)[];
 }) {
   return (
     <section className="mt-8">
@@ -98,19 +112,38 @@ function MenuBlock({
       <SurfaceCard className="overflow-hidden px-0 py-0">
         {items.map((item, index) => {
           const Icon = icons[index];
-          return (
-            <button
-              key={item}
-              type="button"
-              className={`flex w-full items-center gap-4 px-4 py-4 text-left ${
-                index > 0 ? "border-t border-[var(--line)]" : ""
-              }`}
-            >
+          const href = hrefs[index] ?? null;
+          const borderClass = index > 0 ? "border-t border-[var(--line)]" : "";
+          const inner = Icon ? (
+            <>
               <IconBadge className="h-12 w-12 rounded-2xl">
                 <Icon size={22} />
               </IconBadge>
               <span className="flex-1 text-[1.1rem] font-medium">{item}</span>
               <ChevronRight size={20} className="text-[var(--text-secondary)]" />
+            </>
+          ) : null;
+
+          if (href) {
+            return (
+              <Link
+                key={item}
+                href={href}
+                prefetch={true}
+                className={`${MENU_ITEM_CLASS} ${borderClass}`}
+              >
+                {inner}
+              </Link>
+            );
+          }
+
+          return (
+            <button
+              key={item}
+              type="button"
+              className={`${MENU_ITEM_CLASS} ${borderClass}`}
+            >
+              {inner}
             </button>
           );
         })}

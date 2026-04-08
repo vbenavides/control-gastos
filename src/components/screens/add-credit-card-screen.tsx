@@ -18,10 +18,12 @@ import { useState } from "react";
 
 import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
 import {
+  formatMoneyInput,
   getNumericInputWidth,
   normalizeNumericBlurValue,
   parseNumericInput,
   sanitizeNumericInput,
+  stripMoneyFormat,
 } from "@/lib/numeric-input";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 
@@ -68,7 +70,7 @@ export function AddCreditCardScreen() {
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
       <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
-        <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
           <Link
             href="/cuentas?tab=credito"
             prefetch={true}
@@ -99,10 +101,10 @@ export function AddCreditCardScreen() {
                 name="balance"
                 type="text"
                 inputMode="numeric"
-                value={balance}
-                onChange={(event) => setBalance(sanitizeNumericInput(event.target.value, "integer"))}
+                value={formatMoneyInput(balance, currencyCode)}
+                onChange={(event) => setBalance(sanitizeNumericInput(stripMoneyFormat(event.target.value, currencyCode), "integer"))}
                 onBlur={() => setBalance((current) => normalizeNumericBlurValue(current, "integer"))}
-                style={{ width: getNumericInputWidth(balance) }}
+                style={{ width: getNumericInputWidth(formatMoneyInput(balance, currencyCode)) }}
                 className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
               />
             </div>
@@ -142,6 +144,7 @@ export function AddCreditCardScreen() {
                 value={creditLimit}
                 onChange={setCreditLimit}
                 mode="integer"
+                currencyCode={currencyCode}
               />
             </FormField>
 
@@ -311,6 +314,7 @@ function InlineAmountInput({
   value,
   onChange,
   mode = "integer",
+  currencyCode = "CLP",
 }: Readonly<{
   id: string;
   icon: ReactNode;
@@ -318,7 +322,10 @@ function InlineAmountInput({
   value: string;
   onChange: (value: string) => void;
   mode?: "integer" | "decimal";
+  currencyCode?: string;
 }>) {
+  const isMoney = mode === "integer";
+  const displayValue = isMoney ? formatMoneyInput(value, currencyCode) : value;
   return (
     <div className="flex items-center gap-3 text-[var(--text-primary)]">
       {icon}
@@ -328,10 +335,13 @@ function InlineAmountInput({
           id={id}
           type="text"
           inputMode={mode === "decimal" ? "decimal" : "numeric"}
-          value={value}
-          onChange={(event) => onChange(sanitizeNumericInput(event.target.value, mode))}
+          value={displayValue}
+          onChange={(event) => {
+            const raw = isMoney ? stripMoneyFormat(event.target.value, currencyCode) : event.target.value;
+            onChange(sanitizeNumericInput(raw, mode));
+          }}
           onBlur={() => onChange(normalizeNumericBlurValue(value, mode))}
-          style={{ width: getNumericInputWidth(value, 4) }}
+          style={{ width: getNumericInputWidth(displayValue, 4) }}
           className="type-body min-w-[4ch] max-w-full border-0 bg-transparent p-0 outline-none placeholder:text-[var(--text-secondary)]"
         />
       </div>

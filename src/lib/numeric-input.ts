@@ -1,5 +1,34 @@
 export type NumericInputMode = "integer" | "decimal";
 
+// ─── Money display formatting ─────────────────────────────────────────────────
+// State always stores raw digit strings (e.g. "20000").
+// These helpers only affect what the <input value> shows (e.g. "20.000" for CLP).
+
+function getThousandSep(currencyCode: string): string {
+  return currencyCode === "USD" ? "," : "."; // CLP → dot, USD → comma
+}
+
+/**
+ * Format raw digit string for money display.
+ * "20000" + "CLP" → "20.000"
+ * "20000" + "USD" → "20,000"
+ */
+export function formatMoneyInput(rawDigits: string, currencyCode: string = "CLP"): string {
+  if (!rawDigits || rawDigits === "") return "";
+  const sep = getThousandSep(currencyCode);
+  return rawDigits.replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+}
+
+/**
+ * Strip thousand separators from a formatted display value to recover raw digits.
+ * "20.000" + "CLP" → "20000"
+ * "20,000" + "USD" → "20000"
+ */
+export function stripMoneyFormat(formattedValue: string, currencyCode: string = "CLP"): string {
+  const sep = getThousandSep(currencyCode);
+  return formattedValue.split(sep).join("");
+}
+
 export function sanitizeNumericInput(value: string, mode: NumericInputMode = "integer"): string {
   const compactValue = value.replace(/\s+/g, "").replace("$", "");
 

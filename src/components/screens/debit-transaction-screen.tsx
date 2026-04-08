@@ -52,13 +52,15 @@ export function DebitTransactionScreen() {
   const [note, setNote] = useState("");
 
   useEffect(() => {
-    if (transaction) {
+    if (!transaction) return;
+    const id = window.requestAnimationFrame(() => {
       setDescription(transaction.description);
       setTransactionDate(transaction.date);
       setPaymentDate(transaction.paymentDate);
       setCategory(transaction.category);
       setNote(transaction.note ?? "");
-    }
+    });
+    return () => window.cancelAnimationFrame(id);
   }, [transaction]);
 
   const handleDelete = async () => {
@@ -107,8 +109,8 @@ export function DebitTransactionScreen() {
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-28 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
-        <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-28 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
           <button
             type="button"
             aria-label="Volver"

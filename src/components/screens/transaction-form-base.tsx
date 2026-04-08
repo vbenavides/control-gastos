@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Bell,
   CalendarCheck2,
-  CalendarDays,
   ChevronDown,
   Clock,
   CreditCard,
@@ -18,10 +17,14 @@ import {
 } from "lucide-react";
 
 import {
+  formatMoneyInput,
   getNumericInputWidth,
   normalizeNumericBlurValue,
   sanitizeNumericInput,
+  stripMoneyFormat,
 } from "@/lib/numeric-input";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
+import { DatePickerField } from "@/components/date-picker-field";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -92,10 +95,13 @@ export function FormScrollBody({ children }: { children: ReactNode }) {
 export function AmountSection({
   value,
   onChange,
+  currencyCode = DEFAULT_CURRENCY_CODE,
 }: {
   value: string;
   onChange: (v: string) => void;
+  currencyCode?: string;
 }) {
+  const displayValue = formatMoneyInput(value, currencyCode);
   return (
     <section className="px-1 pt-7 text-center">
       <p className="text-[0.76rem] font-medium tracking-wide text-[var(--text-secondary)]">
@@ -111,14 +117,14 @@ export function AmountSection({
           name="amount"
           type="text"
           inputMode="numeric"
-          value={value}
+          value={displayValue}
           onChange={(e) =>
-            onChange(sanitizeNumericInput(e.target.value, "integer"))
+            onChange(sanitizeNumericInput(stripMoneyFormat(e.target.value, currencyCode), "integer"))
           }
           onBlur={() =>
             onChange(normalizeNumericBlurValue(value, "integer"))
           }
-          style={{ width: getNumericInputWidth(value) }}
+          style={{ width: getNumericInputWidth(displayValue) }}
           className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
         />
       </div>
@@ -304,22 +310,13 @@ export function FormDateField({
   className?: string;
 }) {
   return (
-    <FieldRow className={className}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <div className="flex items-center gap-3">
-        <span className="shrink-0 text-white/55">
-          <CalendarDays size={16} />
-        </span>
-        <input
-          id={id}
-          name={id}
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="type-body flex-1 border-0 bg-transparent p-0 text-[var(--text-primary)] outline-none [color-scheme:dark]"
-        />
-      </div>
-    </FieldRow>
+    <DatePickerField
+      id={id}
+      label={label}
+      value={value}
+      onChange={onChange}
+      className={className}
+    />
   );
 }
 

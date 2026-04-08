@@ -14,10 +14,10 @@ import type { AccountType } from "@/lib/models";
 export type { AccountType };
 
 /** Tabs de la pantalla de cuentas. */
-export const accountTabs = ["Cuentas de débito", "Tarjetas de crédito"] as const;
+export const accountTabs = ["Cuentas", "Tarjetas de crédito"] as const;
 
 /** Opciones del tipo de cuenta de débito. */
-export const addAccountTypeOptions: AccountType[] = ["Cheques", "Ahorro", "Efectivo"];
+export const addAccountTypeOptions: AccountType[] = ["Corriente", "Ahorro", "Efectivo", "Débito"];
 
 // ─── Acciones rápidas del FAB "+" ────────────────────────────────────────────
 

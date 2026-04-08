@@ -9,10 +9,12 @@ import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
 import type { AccountType } from "@/lib/models";
 import { addAccountTypeOptions } from "@/lib/mock-data";
 import {
+  formatMoneyInput,
   getNumericInputWidth,
   normalizeNumericBlurValue,
   parseNumericInput,
   sanitizeNumericInput,
+  stripMoneyFormat,
 } from "@/lib/numeric-input";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 
@@ -22,7 +24,7 @@ export function AddAccountScreen() {
 
   const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
-  const [accountType, setAccountType] = useState<AccountType>("Cheques");
+  const [accountType, setAccountType] = useState<AccountType>("Corriente");
   const [isSaving, setIsSaving] = useState(false);
   const currencyCode = DEFAULT_CURRENCY_CODE;
 
@@ -35,13 +37,13 @@ export function AddAccountScreen() {
 
     setIsSaving(true);
     try {
-      const account = await create({
+      await create({
         name,
         balance,
         type: accountType,
         currencyCode,
       });
-      router.push(`/cuentas/debito/${account.id}`);
+      router.push("/cuentas?tab=debito");
     } finally {
       setIsSaving(false);
     }
@@ -50,7 +52,7 @@ export function AddAccountScreen() {
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
       <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
-        <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
           <Link
             href="/cuentas?tab=debito"
             prefetch={true}
@@ -81,10 +83,10 @@ export function AddAccountScreen() {
                 name="amount"
                 type="text"
                 inputMode="numeric"
-                value={amount}
-                onChange={(event) => setAmount(sanitizeNumericInput(event.target.value, "integer"))}
+                value={formatMoneyInput(amount, currencyCode)}
+                onChange={(event) => setAmount(sanitizeNumericInput(stripMoneyFormat(event.target.value, currencyCode), "integer"))}
                 onBlur={() => setAmount((current) => normalizeNumericBlurValue(current, "integer"))}
-                style={{ width: getNumericInputWidth(amount) }}
+                style={{ width: getNumericInputWidth(formatMoneyInput(amount, currencyCode)) }}
                 className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
               />
             </div>

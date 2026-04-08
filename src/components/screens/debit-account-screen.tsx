@@ -20,9 +20,11 @@ import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
 import type { Transaction, TransactionIconKind } from "@/lib/models";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import {
+  formatMoneyInput,
   normalizeNumericBlurValue,
   parseNumericInput,
   sanitizeNumericInput,
+  stripMoneyFormat,
 } from "@/lib/numeric-input";
 import { useTransactions } from "@/lib/hooks/use-transactions";
 
@@ -371,9 +373,9 @@ export function DebitAccountScreen() {
                 type="text"
                 inputMode="numeric"
                 autoFocus
-                value={balanceInputValue}
+                value={formatMoneyInput(balanceInputValue, account.currencyCode ?? DEFAULT_CURRENCY_CODE)}
                 onChange={(event) =>
-                  setBalanceInputValue(sanitizeNumericInput(event.target.value, "integer"))
+                  setBalanceInputValue(sanitizeNumericInput(stripMoneyFormat(event.target.value, account.currencyCode ?? DEFAULT_CURRENCY_CODE), "integer"))
                 }
                 onBlur={() =>
                   setBalanceInputValue((current) => normalizeNumericBlurValue(current, "integer"))
