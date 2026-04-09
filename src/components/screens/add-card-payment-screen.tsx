@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Wallet } from "lucide-react";
 
@@ -14,13 +14,17 @@ import {
   AmountSection,
   FormDateField,
   FormNotesField,
+  FormPickerField,
   FormScrollBody,
-  FormSelectField,
   SaveButton,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
 } from "@/components/screens/transaction-form-base";
+import {
+  AccountPickerSheet,
+  CreditCardPickerSheet,
+} from "@/components/screens/picker-sheets";
 
 export function AddCardPaymentScreen() {
   const router = useRouter();
@@ -36,8 +40,21 @@ export function AddCardPaymentScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const accountOptions = (accounts ?? []).map((a) => ({ value: a.id, label: a.name }));
-  const cardOptions = (cards ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const [showCardPicker, setShowCardPicker] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+
+  // Reopen the correct picker when returning from create flows
+  useEffect(() => {
+    const pending = sessionStorage.getItem("__returnPicker");
+    if (!pending) return;
+    sessionStorage.removeItem("__returnPicker");
+    if (pending === "credit-card") setShowCardPicker(true);
+    if (pending === "account") setShowAccountPicker(true);
+  }, []);
+
+  const cardName = (cards ?? []).find((c) => c.id === cardId)?.name ?? "";
+  const accountName =
+    (accounts ?? []).find((a) => a.id === payFromAccountId)?.name ?? "";
 
   const numericAmount = parseNumericInput(amount);
   const formatMoney = (n: number) => `$${n.toLocaleString("es-CL")}`;
@@ -71,12 +88,10 @@ export function AddCardPaymentScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      // Descontar de la cuenta de débito
       if (account) {
         await updateAccount(payFromAccountId, { balance: account.balance - numericAmount });
       }
 
-      // Reducir la deuda de la tarjeta
       if (card) {
         const newBalance = Math.max(0, card.balance - numericAmount);
         await updateCard(cardId, { balance: newBalance });
@@ -120,23 +135,19 @@ export function AddCardPaymentScreen() {
           </section>
 
           <section className="mt-4">
-            <FormSelectField
-              id="card"
+            <FormPickerField
               label="Tarjeta de crédito"
               icon={<CreditCard size={16} />}
-              value={cardId}
-              onChange={(v) => { setCardId(v); setError(""); }}
+              value={cardName}
               placeholder="Selecciona cuenta"
-              options={cardOptions}
+              onClick={() => setShowCardPicker(true)}
             />
-            <FormSelectField
-              id="pay-from"
+            <FormPickerField
               label="Pagar desde"
               icon={<Wallet size={16} />}
-              value={payFromAccountId}
-              onChange={(v) => { setPayFromAccountId(v); setError(""); }}
+              value={accountName}
               placeholder="Selecciona cuenta"
-              options={accountOptions}
+              onClick={() => setShowAccountPicker(true)}
             />
             <FormDateField id="payment-date" label="Fecha de pago" value={paymentDate} onChange={setPaymentDate} />
             <FormNotesField value={notes} onChange={setNotes} />
@@ -149,6 +160,23 @@ export function AddCardPaymentScreen() {
 
         <SaveButton isSaving={isSaving} />
       </form>
+
+      {showCardPicker && (
+        <CreditCardPickerSheet
+          selected={cardId}
+          onSelect={(id) => { setCardId(id); setError(""); }}
+          onClose={() => setShowCardPicker(false)}
+        />
+      )}
+
+      {showAccountPicker && (
+        <AccountPickerSheet
+          selected={payFromAccountId}
+          onSelect={(id) => { setPayFromAccountId(id); setError(""); }}
+          onClose={() => setShowAccountPicker(false)}
+          pickerKey="account"
+        />
+      )}
     </TransactionFormLayout>
   );
 }

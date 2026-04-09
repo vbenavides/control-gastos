@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw, SquarePen, Wallet } from "lucide-react";
 
@@ -11,17 +11,22 @@ import { KIND_META } from "@/lib/transaction-defaults";
 
 import {
   AmountSection,
+  AutoPaymentRow,
   FormDateField,
   FormNotesField,
+  FormPickerField,
   FormScrollBody,
-  FormSelectField,
   FormTextField,
   FormToggleRow,
+  NumberPickerSheet,
+  RecurringFields,
   SaveButton,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
+  useRecurringSection,
 } from "@/components/screens/transaction-form-base";
+import { AccountPickerSheet } from "@/components/screens/picker-sheets";
 
 export function AddTransferScreen() {
   const router = useRouter();
@@ -34,11 +39,29 @@ export function AddTransferScreen() {
   const [toAccountId, setToAccountId] = useState("");
   const [date, setDate] = useState(todayISO);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [autoPayment, setAutoPayment] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const accountOptions = (accounts ?? []).map((a) => ({ value: a.id, label: a.name }));
+  const [showFromAccountPicker, setShowFromAccountPicker] = useState(false);
+  const [showToAccountPicker, setShowToAccountPicker] = useState(false);
+
+  const recurring = useRecurringSection();
+
+  // Reopen the correct picker when returning from the add-account flow
+  useEffect(() => {
+    const pending = sessionStorage.getItem("__returnPicker");
+    if (!pending) return;
+    sessionStorage.removeItem("__returnPicker");
+    if (pending === "from-account") setShowFromAccountPicker(true);
+    if (pending === "to-account") setShowToAccountPicker(true);
+  }, []);
+
+  const fromAccountName =
+    (accounts ?? []).find((a) => a.id === fromAccountId)?.name ?? "";
+  const toAccountName =
+    (accounts ?? []).find((a) => a.id === toAccountId)?.name ?? "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,12 +79,15 @@ export function AddTransferScreen() {
       const toAccount = (accounts ?? []).find((a) => a.id === toAccountId);
       const meta = KIND_META.transfer;
       const desc = description.trim() || "Transferencia";
-      const noteStr = [
-        notes.trim(),
-        isRecurring ? "Recurrente" : "",
-      ].filter(Boolean).join(" · ") || undefined;
 
-      // Transacción de salida (cuenta origen)
+      const recurringNote = isRecurring
+        ? [
+            recurring.buildNoteFragment(),
+            autoPayment ? "Pago automático" : "",
+          ].filter(Boolean).join(" · ")
+        : "";
+      const noteStr = [notes.trim(), recurringNote].filter(Boolean).join(" · ") || undefined;
+
       await createTransaction({
         accountId: fromAccountId,
         amount: numAmount,
@@ -77,7 +103,6 @@ export function AddTransferScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      // Transacción de entrada (cuenta destino)
       await createTransaction({
         accountId: toAccountId,
         amount: numAmount,
@@ -93,7 +118,6 @@ export function AddTransferScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      // Actualizar balances
       if (fromAccount) {
         await updateAccount(fromAccountId, { balance: fromAccount.balance - numAmount });
       }
@@ -125,31 +149,49 @@ export function AddTransferScreen() {
               value={description}
               onChange={setDescription}
             />
-            <FormSelectField
-              id="from-account"
+            <FormPickerField
               label="Cuenta origen"
               icon={<Wallet size={16} />}
-              value={fromAccountId}
-              onChange={(v) => { setFromAccountId(v); setError(""); }}
+              value={fromAccountName}
               placeholder="Selecciona cuenta"
-              options={accountOptions}
+              onClick={() => setShowFromAccountPicker(true)}
             />
-            <FormSelectField
-              id="to-account"
+            <FormPickerField
               label="Cuenta destino"
               icon={<Wallet size={16} />}
-              value={toAccountId}
-              onChange={(v) => { setToAccountId(v); setError(""); }}
+              value={toAccountName}
               placeholder="Selecciona cuenta"
-              options={accountOptions}
+              onClick={() => setShowToAccountPicker(true)}
             />
-            <FormDateField id="date" label="Fecha de Transaccion" value={date} onChange={setDate} />
+            <FormDateField
+              id="date"
+              label="Fecha de Transaccion"
+              value={date}
+              onChange={setDate}
+            />
             <FormToggleRow
               icon={<RotateCcw size={16} />}
               label="Recurrente"
               checked={isRecurring}
               onChange={setIsRecurring}
             />
+
+            {isRecurring && (
+              <>
+                <RecurringFields
+                  repeatInterval={recurring.repeatInterval}
+                  onRepeatInterval={recurring.setRepeatInterval}
+                  repeatEvery={recurring.repeatEvery}
+                  onOpenEachPicker={() => recurring.setShowEachPicker(true)}
+                  stopMode={recurring.stopMode}
+                  onStopMode={recurring.handleStopMode}
+                  stopDate={recurring.stopDate}
+                  onStopDate={recurring.setStopDate}
+                />
+                <AutoPaymentRow checked={autoPayment} onChange={setAutoPayment} />
+              </>
+            )}
+
             <FormNotesField value={notes} onChange={setNotes} />
           </section>
 
@@ -160,6 +202,32 @@ export function AddTransferScreen() {
 
         <SaveButton isSaving={isSaving} />
       </form>
+
+      {recurring.showEachPicker && (
+        <NumberPickerSheet
+          value={recurring.repeatEvery}
+          onClose={() => recurring.setShowEachPicker(false)}
+          onSelect={recurring.setRepeatEvery}
+        />
+      )}
+
+      {showFromAccountPicker && (
+        <AccountPickerSheet
+          selected={fromAccountId}
+          onSelect={(id) => { setFromAccountId(id); setError(""); }}
+          onClose={() => setShowFromAccountPicker(false)}
+          pickerKey="from-account"
+        />
+      )}
+
+      {showToAccountPicker && (
+        <AccountPickerSheet
+          selected={toAccountId}
+          onSelect={(id) => { setToAccountId(id); setError(""); }}
+          onClose={() => setShowToAccountPicker(false)}
+          pickerKey="to-account"
+        />
+      )}
     </TransactionFormLayout>
   );
 }

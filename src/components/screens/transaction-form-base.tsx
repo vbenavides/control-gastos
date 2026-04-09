@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   RotateCcw,
   SquarePen,
   Wallet,
+  X,
 } from "lucide-react";
 
 import {
@@ -24,7 +25,7 @@ import {
   stripMoneyFormat,
 } from "@/lib/numeric-input";
 import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
-import { DatePickerField } from "@/components/date-picker-field";
+import { DatePickerField, InlineDatePicker } from "@/components/date-picker-field";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -236,6 +237,49 @@ export function FormTextField({
   );
 }
 
+// ─── Clickable picker field (opens a bottom sheet) ───────────────────────────
+
+export function FormPickerField({
+  label,
+  icon,
+  value,
+  placeholder,
+  onClick,
+  className = "",
+}: {
+  label: string;
+  icon?: ReactNode;
+  value: string;
+  placeholder?: string;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <FieldRow className={className}>
+      <FieldLabel>{label}</FieldLabel>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full items-center gap-3"
+      >
+        {icon ? (
+          <span className="shrink-0 text-white/55">{icon}</span>
+        ) : null}
+        <span
+          className={[
+            "type-body min-w-0 flex-1 text-left",
+            value
+              ? "text-[var(--text-primary)]"
+              : "text-[var(--text-secondary)]",
+          ].join(" ")}
+        >
+          {value || placeholder}
+        </span>
+      </button>
+    </FieldRow>
+  );
+}
+
 export function FormSelectField({
   id,
   label,
@@ -396,6 +440,310 @@ export function SaveButton({ isSaving = false }: { isSaving?: boolean }) {
       >
         {isSaving ? "Guardando…" : "Guardar"}
       </button>
+    </div>
+  );
+}
+
+// ─── Recurring section — shared types, hook, and components ──────────────────
+
+export type RecurringInterval = "diario" | "semanal" | "quincenal" | "mensual" | "anual";
+export type RecurringStopMode = "nunca" | "en-la-fecha";
+
+function oneYearFromNow(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Drop-in hook — call once per form that has a Recurrente toggle. */
+export function useRecurringSection() {
+  const [repeatInterval, setRepeatInterval] = useState<RecurringInterval>("mensual");
+  const [repeatEvery, setRepeatEvery] = useState(1);
+  const [stopMode, setStopMode] = useState<RecurringStopMode>("nunca");
+  const [stopDate, setStopDate] = useState("");
+  const [showEachPicker, setShowEachPicker] = useState(false);
+
+  function handleStopMode(mode: RecurringStopMode) {
+    setStopMode(mode);
+    if (mode === "en-la-fecha" && !stopDate) setStopDate(oneYearFromNow());
+  }
+
+  function buildNoteFragment(): string {
+    return [
+      `Recurrente: ${repeatInterval}, cada ${repeatEvery}`,
+      stopMode === "en-la-fecha" && stopDate
+        ? `hasta ${formatDateISO(stopDate)}`
+        : "sin fecha límite",
+    ].join(", ");
+  }
+
+  return {
+    repeatInterval, setRepeatInterval,
+    repeatEvery, setRepeatEvery,
+    stopMode, stopDate, setStopDate,
+    showEachPicker, setShowEachPicker,
+    handleStopMode,
+    buildNoteFragment,
+  };
+}
+
+/**
+ * Renders the "Repetir + Cada" two-column row and the "Parar" row.
+ * Place inside a section, immediately after the Recurrente toggle.
+ */
+export function RecurringFields({
+  repeatInterval,
+  onRepeatInterval,
+  repeatEvery,
+  onOpenEachPicker,
+  stopMode,
+  onStopMode,
+  stopDate,
+  onStopDate,
+}: {
+  repeatInterval: RecurringInterval;
+  onRepeatInterval: (v: RecurringInterval) => void;
+  repeatEvery: number;
+  onOpenEachPicker: () => void;
+  stopMode: RecurringStopMode;
+  onStopMode: (v: RecurringStopMode) => void;
+  stopDate: string;
+  onStopDate: (v: string) => void;
+}) {
+  return (
+    <>
+      {/* Repetir + Cada */}
+      <FieldRow>
+        <div className="grid grid-cols-2 divide-x divide-[var(--line)]">
+          <div className="pr-5">
+            <FieldLabel htmlFor="repeat-interval">Repetir</FieldLabel>
+            <div className="relative flex items-center">
+              <select
+                id="repeat-interval"
+                value={repeatInterval}
+                onChange={(e) => onRepeatInterval(e.target.value as RecurringInterval)}
+                className="type-body min-h-[1.75rem] w-full appearance-none border-0 bg-transparent py-0 pr-4 text-[var(--text-primary)] outline-none"
+              >
+                <option value="diario" className="bg-[var(--app-bg)]">Diario</option>
+                <option value="semanal" className="bg-[var(--app-bg)]">Semanal</option>
+                <option value="quincenal" className="bg-[var(--app-bg)]">Quincenal</option>
+                <option value="mensual" className="bg-[var(--app-bg)]">Mensual</option>
+                <option value="anual" className="bg-[var(--app-bg)]">Anual</option>
+              </select>
+              <ChevronDown
+                size={13}
+                className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-white/50"
+              />
+            </div>
+          </div>
+          <div className="pl-5">
+            <FieldLabel>Cada</FieldLabel>
+            <button
+              type="button"
+              onClick={onOpenEachPicker}
+              className="type-body block w-full text-left text-[var(--text-primary)] transition hover:opacity-75"
+              aria-label={`Repetir cada ${repeatEvery}. Tap para cambiar`}
+            >
+              {repeatEvery}
+            </button>
+          </div>
+        </div>
+      </FieldRow>
+
+      {/* Parar */}
+      <FieldRow>
+        <FieldLabel>Parar</FieldLabel>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onStopMode("nunca")}
+              className={[
+                "rounded-full px-4 py-1.5 text-[0.88rem] font-medium transition",
+                stopMode === "nunca"
+                  ? "bg-[var(--accent)] text-white"
+                  : "bg-white/10 text-[var(--text-secondary)] hover:bg-white/15",
+              ].join(" ")}
+            >
+              Nunca
+            </button>
+            <button
+              type="button"
+              onClick={() => onStopMode("en-la-fecha")}
+              className={[
+                "rounded-full px-4 py-1.5 text-[0.88rem] font-medium transition",
+                stopMode === "en-la-fecha"
+                  ? "bg-[var(--accent)] text-white"
+                  : "bg-white/10 text-[var(--text-secondary)] hover:bg-white/15",
+              ].join(" ")}
+            >
+              En la fecha
+            </button>
+          </div>
+          {stopMode === "en-la-fecha" && (
+            <InlineDatePicker
+              id="recurring-stop-date"
+              value={stopDate}
+              onChange={onStopDate}
+            />
+          )}
+        </div>
+      </FieldRow>
+    </>
+  );
+}
+
+/** Renders the "Pago Automático" row with CalendarCheck2 icon and toggle. */
+export function AutoPaymentRow({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <FieldRow>
+      <FieldLabel>Pago Automático</FieldLabel>
+      <div className="flex items-start gap-3">
+        <span className="mt-[1px] shrink-0 text-white/55">
+          <CalendarCheck2 size={16} />
+        </span>
+        <p className="type-body flex-1 leading-snug text-[var(--text-primary)]">
+          Marcar como pagado automáticamente en la fecha de vencimiento
+        </p>
+        <ToggleSwitch checked={checked} onChange={onChange} />
+      </div>
+    </FieldRow>
+  );
+}
+
+// ─── Number picker sheet ──────────────────────────────────────────────────────
+// Bottom sheet for picking a number (e.g. "Cada N" in recurring forms).
+// Same slide-up UX as the DayPickerSheet in budget-config-screen.tsx.
+
+// 1–30 + 0 (0 = "Último día del mes", igual que en DayPickerSheet de budget-config)
+const NUMBER_ITEMS = [...Array.from({ length: 30 }, (_, i) => i + 1), 0] as const;
+
+function formatPickerNumber(n: number): string {
+  return n === 0 ? "Último día del mes" : String(n);
+}
+
+export function NumberPickerSheet({
+  value,
+  onClose,
+  onSelect,
+  title = "Cada",
+}: {
+  value: number;
+  onClose: () => void;
+  onSelect: (n: number) => void;
+  title?: string;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const selectedRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => setIsVisible(true));
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    selectedRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
+  }, [isVisible]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleClose() {
+    setIsVisible(false);
+    setTimeout(onClose, 260);
+  }
+
+  function handleSelect(n: number) {
+    onSelect(n);
+    handleClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-label="Cerrar selector"
+        className={[
+          "absolute inset-0 transition-[background-color] duration-200",
+          isVisible ? "bg-black/55" : "bg-black/0",
+        ].join(" ")}
+        onClick={handleClose}
+      />
+
+      {/* Sheet */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={[
+          "relative z-10 flex max-h-[68svh] flex-col rounded-t-[1.5rem]",
+          "border border-[var(--line)] bg-[var(--surface)]",
+          "shadow-[0_-20px_50px_rgba(0,0,0,0.45)]",
+          "transition-transform duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "will-change-transform",
+          "sm:mx-auto sm:w-full sm:max-w-[640px] lg:max-w-[720px]",
+        ].join(" ")}
+        style={{ transform: isVisible ? "translateY(0)" : "translateY(100%)" }}
+      >
+        {/* Fixed header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-6 py-4">
+          <h3 className="text-[1rem] font-semibold text-[var(--text-primary)]">
+            {title}
+          </h3>
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label="Cerrar"
+            className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-[var(--text-secondary)] transition hover:bg-white/16 hover:text-white"
+          >
+            <X size={15} strokeWidth={2.2} />
+          </button>
+        </div>
+
+        {/* Scrollable list */}
+        <div className="flex-1 overflow-y-auto">
+          {NUMBER_ITEMS.map((n) => {
+            const isSelected = value === n;
+            return (
+              <button
+                key={n}
+                ref={isSelected ? selectedRef : undefined}
+                type="button"
+                onClick={() => handleSelect(n)}
+                className={[
+                  "w-full border-b border-[var(--line)] py-[0.85rem] text-center transition",
+                  n === 0
+                    ? "text-[1rem] font-semibold"
+                    : "text-[1.05rem] font-normal",
+                  isSelected
+                    ? "text-[var(--accent)]"
+                    : "text-[var(--text-primary)] hover:bg-white/[0.03]",
+                ].join(" ")}
+              >
+                {formatPickerNumber(n)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

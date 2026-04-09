@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Layers, SquarePen, Wallet } from "lucide-react";
 
@@ -14,14 +14,18 @@ import {
   AmountSection,
   FormDateField,
   FormNotesField,
+  FormPickerField,
   FormScrollBody,
-  FormSelectField,
   FormTextField,
   SaveButton,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
 } from "@/components/screens/transaction-form-base";
+import {
+  AccountPickerSheet,
+  CategoryPickerSheet,
+} from "@/components/screens/picker-sheets";
 
 export function AddExpenseScreen() {
   const router = useRouter();
@@ -38,8 +42,22 @@ export function AddExpenseScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const accountOptions = (accounts ?? []).map((a) => ({ value: a.id, label: a.name }));
-  const categoryOptions = (categories ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  // Reopen the correct picker when returning from the add-account/add-category flow
+  useEffect(() => {
+    const pending = sessionStorage.getItem("__returnPicker");
+    if (!pending) return;
+    sessionStorage.removeItem("__returnPicker");
+    if (pending === "account") setShowAccountPicker(true);
+    if (pending === "category") setShowCategoryPicker(true);
+  }, []);
+
+  const accountName =
+    (accounts ?? []).find((a) => a.id === accountId)?.name ?? "";
+  const categoryName =
+    (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +70,6 @@ export function AddExpenseScreen() {
     setIsSaving(true);
     try {
       const account = (accounts ?? []).find((a) => a.id === accountId);
-      const categoryName = (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
       const meta = KIND_META.expense;
 
       await createTransaction({
@@ -70,7 +87,6 @@ export function AddExpenseScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      // Descontar del balance de la cuenta
       if (account) {
         await updateAccount(accountId, { balance: account.balance - numAmount });
       }
@@ -100,23 +116,19 @@ export function AddExpenseScreen() {
               onChange={setDescription}
             />
             <FormDateField id="date" label="Fecha de Transaccion" value={date} onChange={setDate} />
-            <FormSelectField
-              id="account"
+            <FormPickerField
               label="Cuenta"
               icon={<Wallet size={16} />}
-              value={accountId}
-              onChange={(v) => { setAccountId(v); setError(""); }}
+              value={accountName}
               placeholder="Selecciona cuenta"
-              options={accountOptions}
+              onClick={() => setShowAccountPicker(true)}
             />
-            <FormSelectField
-              id="category"
+            <FormPickerField
               label="Categoría"
               icon={<Layers size={16} />}
-              value={categoryId}
-              onChange={setCategoryId}
+              value={categoryName}
               placeholder="Selecciona categoría"
-              options={categoryOptions}
+              onClick={() => setShowCategoryPicker(true)}
             />
             <FormNotesField value={notes} onChange={setNotes} />
           </section>
@@ -128,6 +140,24 @@ export function AddExpenseScreen() {
 
         <SaveButton isSaving={isSaving} />
       </form>
+
+      {showAccountPicker && (
+        <AccountPickerSheet
+          selected={accountId}
+          onSelect={(id) => { setAccountId(id); setError(""); }}
+          onClose={() => setShowAccountPicker(false)}
+          pickerKey="account"
+        />
+      )}
+
+      {showCategoryPicker && (
+        <CategoryPickerSheet
+          type="expense"
+          selected={categoryId}
+          onSelect={setCategoryId}
+          onClose={() => setShowCategoryPicker(false)}
+        />
+      )}
     </TransactionFormLayout>
   );
 }

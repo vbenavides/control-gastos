@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlignJustify, CreditCard, Layers, Navigation, SquarePen } from "lucide-react";
 
@@ -15,8 +15,8 @@ import {
   FieldLabel,
   FieldRow,
   FormDateField,
+  FormPickerField,
   FormScrollBody,
-  FormSelectField,
   FormTextField,
   FormToggleRow,
   SaveButton,
@@ -24,6 +24,10 @@ import {
   TransactionFormLayout,
   todayISO,
 } from "@/components/screens/transaction-form-base";
+import {
+  CategoryPickerSheet,
+  CreditCardPickerSheet,
+} from "@/components/screens/picker-sheets";
 
 export function AddInstallmentsScreen() {
   const router = useRouter();
@@ -41,8 +45,22 @@ export function AddInstallmentsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const cardOptions = (cards ?? []).map((c) => ({ value: c.id, label: c.name }));
-  const categoryOptions = (categories ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showCardPicker, setShowCardPicker] = useState(false);
+
+  // Reopen the correct picker when returning from create flows
+  useEffect(() => {
+    const pending = sessionStorage.getItem("__returnPicker");
+    if (!pending) return;
+    sessionStorage.removeItem("__returnPicker");
+    if (pending === "category") setShowCategoryPicker(true);
+    if (pending === "credit-card") setShowCardPicker(true);
+  }, []);
+
+  const categoryName =
+    (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
+  const cardName =
+    (cards ?? []).find((c) => c.id === cardId)?.name ?? "";
 
   const numericAmount = parseNumericInput(amount);
   const paymentCount = Math.max(1, parseInt(payments || "1", 10));
@@ -61,11 +79,9 @@ export function AddInstallmentsScreen() {
     setIsSaving(true);
     try {
       const card = (cards ?? []).find((c) => c.id === cardId);
-      const categoryName = (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
       const meta = KIND_META.installments;
 
       await createTransaction({
-        // Usamos cardId como accountId (la transacción pertenece a la tarjeta)
         accountId: cardId,
         amount: numericAmount,
         description: description.trim() || "Compra a meses",
@@ -83,7 +99,6 @@ export function AddInstallmentsScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      // Incrementar el balance (deuda) de la tarjeta
       if (card) {
         await updateCard(cardId, { balance: card.balance + numericAmount });
       }
@@ -112,23 +127,19 @@ export function AddInstallmentsScreen() {
               value={description}
               onChange={setDescription}
             />
-            <FormSelectField
-              id="category"
+            <FormPickerField
               label="Categoría"
               icon={<Layers size={16} />}
-              value={categoryId}
-              onChange={setCategoryId}
+              value={categoryName}
               placeholder="Selecciona categoría"
-              options={categoryOptions}
+              onClick={() => setShowCategoryPicker(true)}
             />
-            <FormSelectField
-              id="card"
+            <FormPickerField
               label="Tarjeta de crédito"
               icon={<CreditCard size={16} />}
-              value={cardId}
-              onChange={(v) => { setCardId(v); setError(""); }}
+              value={cardName}
               placeholder="Selecciona cuenta"
-              options={cardOptions}
+              onClick={() => setShowCardPicker(true)}
             />
 
             {/* Número de Pagos + Mensualidad */}
@@ -180,6 +191,23 @@ export function AddInstallmentsScreen() {
 
         <SaveButton isSaving={isSaving} />
       </form>
+
+      {showCategoryPicker && (
+        <CategoryPickerSheet
+          type="expense"
+          selected={categoryId}
+          onSelect={setCategoryId}
+          onClose={() => setShowCategoryPicker(false)}
+        />
+      )}
+
+      {showCardPicker && (
+        <CreditCardPickerSheet
+          selected={cardId}
+          onSelect={(id) => { setCardId(id); setError(""); }}
+          onClose={() => setShowCardPicker(false)}
+        />
+      )}
     </TransactionFormLayout>
   );
 }

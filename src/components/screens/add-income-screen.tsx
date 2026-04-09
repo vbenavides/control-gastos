@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Layers, RotateCcw, SquarePen, Wallet } from "lucide-react";
 
@@ -12,17 +12,25 @@ import { KIND_META } from "@/lib/transaction-defaults";
 
 import {
   AmountSection,
+  AutoPaymentRow,
   FormDateField,
   FormNotesField,
+  FormPickerField,
   FormScrollBody,
-  FormSelectField,
   FormTextField,
   FormToggleRow,
+  NumberPickerSheet,
+  RecurringFields,
   SaveButton,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
+  useRecurringSection,
 } from "@/components/screens/transaction-form-base";
+import {
+  AccountPickerSheet,
+  CategoryPickerSheet,
+} from "@/components/screens/picker-sheets";
 
 export function AddIncomeScreen() {
   const router = useRouter();
@@ -35,13 +43,30 @@ export function AddIncomeScreen() {
   const [depositAccountId, setDepositAccountId] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayISO);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [autoPayment, setAutoPayment] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const accountOptions = (accounts ?? []).map((a) => ({ value: a.id, label: a.name }));
-  const categoryOptions = (categories ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  const recurring = useRecurringSection();
+
+  // Reopen the correct picker when returning from the add-account/add-category flow
+  useEffect(() => {
+    const pending = sessionStorage.getItem("__returnPicker");
+    if (!pending) return;
+    sessionStorage.removeItem("__returnPicker");
+    if (pending === "account") setShowAccountPicker(true);
+    if (pending === "category") setShowCategoryPicker(true);
+  }, []);
+
+  const accountName =
+    (accounts ?? []).find((a) => a.id === depositAccountId)?.name ?? "";
+  const categoryName =
+    (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +79,14 @@ export function AddIncomeScreen() {
     setIsSaving(true);
     try {
       const account = (accounts ?? []).find((a) => a.id === depositAccountId);
-      const categoryName = (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
       const meta = KIND_META.income;
+
+      const recurringNote = isRecurring
+        ? [
+            recurring.buildNoteFragment(),
+            autoPayment ? "Pago automático" : "",
+          ].filter(Boolean).join(" · ")
+        : "";
 
       await createTransaction({
         accountId: depositAccountId,
@@ -68,18 +99,13 @@ export function AddIncomeScreen() {
         iconKind: meta.iconKind,
         iconBackground: meta.iconBackground,
         iconColor: meta.iconColor,
-        note: [
-          notes.trim(),
-          isRecurring ? "Recurrente" : "",
-        ].filter(Boolean).join(" · ") || undefined,
+        note: [notes.trim(), recurringNote].filter(Boolean).join(" · ") || undefined,
         statusLabel: meta.statusLabel,
       });
 
-      // Sumar al balance de la cuenta
       if (account) {
         await updateAccount(depositAccountId, { balance: account.balance + numAmount });
       }
-
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");
@@ -104,31 +130,51 @@ export function AddIncomeScreen() {
               value={description}
               onChange={setDescription}
             />
-            <FormSelectField
-              id="deposit-account"
+            <FormPickerField
               label="Depositar en"
               icon={<Wallet size={16} />}
-              value={depositAccountId}
-              onChange={(v) => { setDepositAccountId(v); setError(""); }}
+              value={accountName}
               placeholder="Selecciona cuenta"
-              options={accountOptions}
+              onClick={() => setShowAccountPicker(true)}
             />
-            <FormDateField id="payment-date" label="Día de pago" value={paymentDate} onChange={setPaymentDate} />
+            <FormDateField
+              id="payment-date"
+              label="Día de pago"
+              value={paymentDate}
+              onChange={setPaymentDate}
+            />
             <FormToggleRow
               icon={<RotateCcw size={16} />}
               label="Recurrente"
               checked={isRecurring}
               onChange={setIsRecurring}
             />
-            <FormSelectField
-              id="category"
+
+            {isRecurring && (
+              <RecurringFields
+                repeatInterval={recurring.repeatInterval}
+                onRepeatInterval={recurring.setRepeatInterval}
+                repeatEvery={recurring.repeatEvery}
+                onOpenEachPicker={() => recurring.setShowEachPicker(true)}
+                stopMode={recurring.stopMode}
+                onStopMode={recurring.handleStopMode}
+                stopDate={recurring.stopDate}
+                onStopDate={recurring.setStopDate}
+              />
+            )}
+
+            <FormPickerField
               label="Categoría"
               icon={<Layers size={16} />}
-              value={categoryId}
-              onChange={setCategoryId}
+              value={categoryName}
               placeholder="Selecciona categoría"
-              options={categoryOptions}
+              onClick={() => setShowCategoryPicker(true)}
             />
+
+            {isRecurring && (
+              <AutoPaymentRow checked={autoPayment} onChange={setAutoPayment} />
+            )}
+
             <FormNotesField value={notes} onChange={setNotes} />
           </section>
 
@@ -139,6 +185,32 @@ export function AddIncomeScreen() {
 
         <SaveButton isSaving={isSaving} />
       </form>
+
+      {recurring.showEachPicker && (
+        <NumberPickerSheet
+          value={recurring.repeatEvery}
+          onClose={() => recurring.setShowEachPicker(false)}
+          onSelect={recurring.setRepeatEvery}
+        />
+      )}
+
+      {showAccountPicker && (
+        <AccountPickerSheet
+          selected={depositAccountId}
+          onSelect={(id) => { setDepositAccountId(id); setError(""); }}
+          onClose={() => setShowAccountPicker(false)}
+          pickerKey="account"
+        />
+      )}
+
+      {showCategoryPicker && (
+        <CategoryPickerSheet
+          type="income"
+          selected={categoryId}
+          onSelect={setCategoryId}
+          onClose={() => setShowCategoryPicker(false)}
+        />
+      )}
     </TransactionFormLayout>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -14,6 +16,15 @@ import {
 
 import { lockBodyScroll } from "@/lib/body-scroll-lock";
 import { accountQuickActionItems } from "@/lib/mock-data";
+
+const QUICK_ACTION_ROUTES: Record<string, string> = {
+  expense: "/agregar/gasto",
+  payment: "/agregar/pago",
+  income: "/agregar/ingreso",
+  transfer: "/agregar/transferencia",
+  refund: "/agregar/reembolso",
+  cashback: "/agregar/devolucion-efectivo",
+};
 
 type SheetStage = "peek" | "full";
 
@@ -265,19 +276,21 @@ export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomN
             aria-modal="true"
             aria-labelledby="account-quick-actions-title"
             onWheel={handleSheetWheel}
-            onPointerDown={handleSheetPointerDown}
-            onPointerMove={handleSheetPointerMove}
-            onPointerUp={handleSheetPointerEnd}
-            onPointerCancel={handleSheetPointerEnd}
             className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-8 xl:inset-x-auto xl:bottom-5 xl:right-6 xl:w-[32rem] xl:rounded-[2rem]"
             style={{
               opacity: isVisible ? 1 : 0.96,
               transform: `translate3d(0, ${sheetTranslateY}, 0)`,
-              touchAction: "none",
               userSelect: isDraggingSheet ? "none" : undefined,
             }}
           >
-            <div className="border-b border-white/7 px-4 pb-4 pt-3 md:px-5">
+            {/* Drag handle — pointer events scoped here so list items receive clicks */}
+            <div
+              className="border-b border-white/7 px-4 pb-4 pt-3 md:px-5"
+              onPointerDown={handleSheetPointerDown}
+              onPointerMove={handleSheetPointerMove}
+              onPointerUp={handleSheetPointerEnd}
+              onPointerCancel={handleSheetPointerEnd}
+            >
               <div className="mx-auto mb-4 h-[0.32rem] w-14 rounded-full bg-white/92" />
               <h3
                 id="account-quick-actions-title"
@@ -288,17 +301,13 @@ export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomN
             </div>
 
             <ul className="scroll-safe-edge flex-1 overflow-y-auto pb-6">
-              {quickActions.map((item) => (
-                <li key={item.id} className="border-b border-white/7 last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={closeSheet}
-                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left md:px-5 md:py-4"
-                  >
+              {quickActions.map((item) => {
+                const href = QUICK_ACTION_ROUTES[item.kind];
+                const content = (
+                  <>
                     <div className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-[0.95rem] bg-white/[0.055] text-white/92 md:h-12 md:w-12">
                       {renderQuickActionIcon(item.kind)}
                     </div>
-
                     <div className="min-w-0 flex-1">
                       <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[var(--text-primary)] md:text-[1.03rem]">
                         {item.title}
@@ -307,9 +316,32 @@ export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomN
                         {item.description}
                       </p>
                     </div>
-                  </button>
-                </li>
-              ))}
+                  </>
+                );
+
+                return (
+                  <li key={item.id} className="border-b border-white/7 last:border-b-0">
+                    {href ? (
+                      <Link
+                        href={href}
+                        prefetch={true}
+                        onClick={closeSheet}
+                        className="flex w-full items-center gap-3 px-4 py-3.5 transition hover:bg-white/[0.03] active:bg-white/[0.05] md:px-5 md:py-4"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={closeSheet}
+                        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.03] active:bg-white/[0.05] md:px-5 md:py-4"
+                      >
+                        {content}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>

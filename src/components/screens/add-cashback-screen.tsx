@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SquarePen, Wallet } from "lucide-react";
 
@@ -13,14 +13,15 @@ import {
   AmountSection,
   FormDateField,
   FormNotesField,
+  FormPickerField,
   FormScrollBody,
-  FormSelectField,
   FormTextField,
   SaveButton,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
 } from "@/components/screens/transaction-form-base";
+import { AccountPickerSheet } from "@/components/screens/picker-sheets";
 
 export function AddCashbackScreen() {
   const router = useRouter();
@@ -35,7 +36,18 @@ export function AddCashbackScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const accountOptions = (accounts ?? []).map((a) => ({ value: a.id, label: a.name }));
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+
+  // Reopen picker when returning from the add-account flow
+  useEffect(() => {
+    const pending = sessionStorage.getItem("__returnPicker");
+    if (!pending) return;
+    sessionStorage.removeItem("__returnPicker");
+    if (pending === "account") setShowAccountPicker(true);
+  }, []);
+
+  const accountName =
+    (accounts ?? []).find((a) => a.id === depositAccountId)?.name ?? "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +77,6 @@ export function AddCashbackScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      // Sumar al balance (el cashback suma dinero)
       if (account) {
         await updateAccount(depositAccountId, { balance: account.balance + numAmount });
       }
@@ -94,14 +105,12 @@ export function AddCashbackScreen() {
               value={description}
               onChange={setDescription}
             />
-            <FormSelectField
-              id="deposit-account"
+            <FormPickerField
               label="Depositar en"
               icon={<Wallet size={16} />}
-              value={depositAccountId}
-              onChange={(v) => { setDepositAccountId(v); setError(""); }}
+              value={accountName}
               placeholder="Selecciona cuenta"
-              options={accountOptions}
+              onClick={() => setShowAccountPicker(true)}
             />
             <FormDateField id="date" label="Fecha de Transaccion" value={date} onChange={setDate} />
             <FormNotesField value={notes} onChange={setNotes} />
@@ -114,6 +123,15 @@ export function AddCashbackScreen() {
 
         <SaveButton isSaving={isSaving} />
       </form>
+
+      {showAccountPicker && (
+        <AccountPickerSheet
+          selected={depositAccountId}
+          onSelect={(id) => { setDepositAccountId(id); setError(""); }}
+          onClose={() => setShowAccountPicker(false)}
+          pickerKey="account"
+        />
+      )}
     </TransactionFormLayout>
   );
 }

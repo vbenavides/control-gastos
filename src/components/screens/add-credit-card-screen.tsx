@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -61,7 +60,14 @@ export function AddCreditCardScreen() {
         gracePeriodDays: parseInt(gracePeriodDays, 10) || 10,
         paymentReminderEnabled,
       });
-      router.push("/cuentas?tab=credito");
+      const hasReturnPicker =
+        typeof window !== "undefined" &&
+        !!sessionStorage.getItem("__returnPicker");
+      if (hasReturnPicker) {
+        router.back();
+      } else {
+        router.push("/cuentas?tab=credito");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -71,14 +77,23 @@ export function AddCreditCardScreen() {
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
       <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
         <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
-          <Link
-            href="/cuentas?tab=credito"
-            prefetch={true}
+          <button
+            type="button"
+            onClick={() => {
+              const hasReturnPicker =
+                typeof window !== "undefined" &&
+                !!sessionStorage.getItem("__returnPicker");
+              if (hasReturnPicker) {
+                router.back();
+              } else {
+                router.push("/cuentas?tab=credito");
+              }
+            }}
             aria-label="Volver a cuentas"
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >
             <ArrowLeft size={22} />
-          </Link>
+          </button>
 
           <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
             Agregar tarjeta de crédito
