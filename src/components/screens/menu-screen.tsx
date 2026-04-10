@@ -1,5 +1,6 @@
 "use client";
 
+
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -11,16 +12,27 @@ import {
   FolderKanban,
   LineChart,
   ListOrdered,
+  LogOut,
   RefreshCcw,
 } from "lucide-react";
 import { menuSections } from "@/lib/mock-data";
 import { IconBadge, SurfaceCard } from "@/components/ui-kit";
+import { useAuth } from "@/lib/auth/auth-context";
 
 const generalIcons = [ListOrdered, RefreshCcw, FolderKanban, LineChart];
 const toolIcons = [FileUp, Download];
 
 export function MenuScreen() {
   const [showDecimals, setShowDecimals] = useState(true);
+  const { user, signOut } = useAuth();
+
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const fullName = (user?.user_metadata?.full_name ?? user?.email ?? "Usuario") as string;
+  const initials = fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -32,12 +44,41 @@ export function MenuScreen() {
         </header>
 
         <div className="mb-10 flex flex-col items-center justify-center text-center">
-          <div className="grid h-22 w-22 place-items-center rounded-[1.7rem] bg-gradient-to-br from-[#35c7ff] to-[#0b79ae] text-white shadow-[0_18px_40px_rgba(41,187,243,0.28)]">
-            <div className="grid h-14 w-14 place-items-center rounded-full border-4 border-white/90">
-              <DollarSign size={30} />
-            </div>
+          {/* Avatar */}
+          <div className="relative h-24 w-24 overflow-hidden rounded-[1.7rem] border-2 border-[var(--accent)] shadow-[0_18px_40px_rgba(41,187,243,0.28)]">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={fullName}
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#35c7ff] to-[#0b79ae]">
+                {initials ? (
+                  <span className="text-[1.9rem] font-bold text-white">{initials}</span>
+                ) : (
+                  <div className="grid h-14 w-14 place-items-center rounded-full border-4 border-white/90">
+                    <DollarSign size={30} className="text-white" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <p className="mt-6 text-[1.1rem] text-[var(--text-secondary)]">✉ hello@nekomoney.app</p>
+
+          {/* Name */}
+          <p className="mt-5 text-[1.15rem] font-semibold text-[var(--text-primary)]">{fullName}</p>
+
+          {/* Logout button */}
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="mt-3 flex items-center gap-2 rounded-2xl px-4 py-2 text-sm text-[var(--text-secondary)] transition hover:bg-white/5 hover:text-white"
+          >
+            <LogOut size={15} strokeWidth={2} />
+            Cerrar sesión
+          </button>
         </div>
 
         <div className="md:grid md:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] md:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">

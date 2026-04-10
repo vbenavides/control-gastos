@@ -1,4 +1,4 @@
-import type { Category, CreditCard, DebitAccount, Transaction } from "@/lib/models";
+import type { BudgetSettings, Category, CreditCard, DebitAccount, Transaction } from "@/lib/models";
 
 // ─── Cuenta de débito ───────────────────────────────────────────────────────
 
@@ -41,4 +41,11 @@ export interface ICategoryRepository {
   create(data: Omit<Category, "id">): Promise<Category>;
   update(id: string, data: Partial<Omit<Category, "id">>): Promise<Category>;
   delete(id: string): Promise<void>;
+}
+
+// ─── Configuración de presupuesto ────────────────────────────────────────────
+
+export interface IBudgetSettingsRepository {
+  get(): Promise<BudgetSettings | null>;
+  upsert(data: BudgetSettings): Promise<BudgetSettings>;
 }

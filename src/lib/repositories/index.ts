@@ -1,41 +1,40 @@
 /**
- * Repositorios activos.
+ * Repositorios activos — Supabase.
  *
- * Hoy usan localStorage. Para migrar a Supabase:
- *   1. Crear src/lib/repositories/supabase/*.ts implementando las mismas interfaces.
- *   2. Reemplazar los imports de abajo. Los hooks y screens no cambian nada.
+ * Reciben un SupabaseClient y un profileId.
+ * Los repos de localStorage se mantienen en /localStorage/ para referencia.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import type {
+  IBudgetSettingsRepository,
   ICategoryRepository,
   ICreditCardRepository,
   IDebitAccountRepository,
   ITransactionRepository,
 } from "@/lib/repositories/interfaces";
 
-import { LocalStorageCategoryRepository } from "@/lib/repositories/localStorage/category-repo";
-import { LocalStorageCreditCardRepository } from "@/lib/repositories/localStorage/credit-card-repo";
-import { LocalStorageDebitAccountRepository } from "@/lib/repositories/localStorage/debit-account-repo";
-import { LocalStorageTransactionRepository } from "@/lib/repositories/localStorage/transaction-repo";
+import { SupabaseBudgetSettingsRepository } from "@/lib/repositories/supabase/budget-settings-repo";
+import { SupabaseCategoryRepository } from "@/lib/repositories/supabase/category-repo";
+import { SupabaseCreditCardRepository } from "@/lib/repositories/supabase/credit-card-repo";
+import { SupabaseDebitAccountRepository } from "@/lib/repositories/supabase/debit-account-repo";
+import { SupabaseTransactionRepository } from "@/lib/repositories/supabase/transaction-repo";
 
 export type Repositories = {
   debitAccounts: IDebitAccountRepository;
   creditCards: ICreditCardRepository;
   transactions: ITransactionRepository;
   categories: ICategoryRepository;
+  budgetSettings: IBudgetSettingsRepository;
 };
 
-// Singleton: una sola instancia por proceso de cliente.
-let _repos: Repositories | null = null;
-
-export function getRepositories(): Repositories {
-  if (!_repos) {
-    _repos = {
-      debitAccounts: new LocalStorageDebitAccountRepository(),
-      creditCards: new LocalStorageCreditCardRepository(),
-      transactions: new LocalStorageTransactionRepository(),
-      categories: new LocalStorageCategoryRepository(),
-    };
-  }
-  return _repos;
+export function getRepositories(supabase: SupabaseClient, profileId: string): Repositories {
+  return {
+    debitAccounts: new SupabaseDebitAccountRepository(supabase, profileId),
+    creditCards: new SupabaseCreditCardRepository(supabase, profileId),
+    transactions: new SupabaseTransactionRepository(supabase, profileId),
+    categories: new SupabaseCategoryRepository(supabase, profileId),
+    budgetSettings: new SupabaseBudgetSettingsRepository(supabase, profileId),
+  };
 }

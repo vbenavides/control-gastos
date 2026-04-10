@@ -56,7 +56,8 @@ const MONTHS_SHORT = [
 ] as const;
 
 const YEAR_MIN = 2000;
-const YEAR_MAX = 2040;
+/** Años extra hacia adelante desde el año actual */
+const YEAR_FUTURE_OFFSET = 3;
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -150,8 +151,31 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
   const [textError, setTextError] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
 
+  // ── Drag + slide animation state ──────────────────────────────────────────
+  /** px offset applied live while the user drags */
+  const [dragOffset, setDragOffset] = useState(0);
+  /** true while spring-back transition is running */
+  const [isSnapping, setIsSnapping] = useState(false);
+  /** incremented on every month change; gives the grid a new `key` → remount + CSS animation */
+  const [monthKey, setMonthKey] = useState(0);
+  /** direction of the current slide-in animation (state so it's safe to read during render) */
+  const [slideAnimDir, setSlideAnimDir] = useState<"next" | "prev">("next");
+  /** locks drag axis after the first significant movement */
+  const isDragHorizontalRef = useRef<boolean | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const yearListRef = useRef<HTMLDivElement>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+
+  // ── Body scroll lock ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   // Pre-select text when entering text mode
   useEffect(() => {
@@ -185,25 +209,30 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
 
   // ── Month navigation ──────────────────────────────────────────────────────
 
-  const prevMonth = useCallback(() => {
-    setViewM((m) => {
-      if (m === 1) {
-        setViewY((y) => y - 1);
-        return 12;
-      }
-      return m - 1;
-    });
+  const changeMonth = useCallback((dir: "prev" | "next") => {
+    setSlideAnimDir(dir);
+    setMonthKey((k) => k + 1);
+    if (dir === "prev") {
+      setViewM((m) => {
+        if (m === 1) {
+          setViewY((y) => y - 1);
+          return 12;
+        }
+        return m - 1;
+      });
+    } else {
+      setViewM((m) => {
+        if (m === 12) {
+          setViewY((y) => y + 1);
+          return 1;
+        }
+        return m + 1;
+      });
+    }
   }, []);
 
-  const nextMonth = useCallback(() => {
-    setViewM((m) => {
-      if (m === 12) {
-        setViewY((y) => y + 1);
-        return 1;
-      }
-      return m + 1;
-    });
-  }, []);
+  const prevMonth = useCallback(() => changeMonth("prev"), [changeMonth]);
+  const nextMonth = useCallback(() => changeMonth("next"), [changeMonth]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -251,6 +280,69 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
     setView("text-input");
   };
 
+  // ── Swipe handlers (drag en tiempo real + animación al soltar) ───────────
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    touchStartXRef.current = t.clientX;
+    touchStartYRef.current = t.clientY;
+    isDragHorizontalRef.current = null; // resetear bloqueo de eje
+    setIsSnapping(false);
+    setDragOffset(0);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const t = e.touches[0];
+    if (!t) return;
+
+    const dx = t.clientX - touchStartXRef.current;
+    const dy = t.clientY - touchStartYRef.current;
+
+    // Bloquear eje al primer movimiento significativo
+    if (isDragHorizontalRef.current === null) {
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      isDragHorizontalRef.current = Math.abs(dx) > Math.abs(dy);
+    }
+
+    if (!isDragHorizontalRef.current) return; // vertical → dejar hacer scroll
+
+    // Resistencia natural: 80 % del desplazamiento real, máx ±110 px
+    const clamped = Math.max(-110, Math.min(110, dx * 0.8));
+    setDragOffset(clamped);
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+      const t = e.changedTouches[0];
+      if (!t) return;
+
+      const dx = t.clientX - touchStartXRef.current;
+      const dy = t.clientY - touchStartYRef.current;
+      const THRESHOLD = 45;
+
+      // Cambiar mes solo si fue horizontal y superó el umbral
+      if (isDragHorizontalRef.current && Math.abs(dx) > THRESHOLD) {
+        // Resetear offset instantáneamente (sin transición) antes del slide-in
+        setIsSnapping(false);
+        setDragOffset(0);
+        if (dx < 0) nextMonth();
+        else prevMonth();
+      } else if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        // No superó umbral → spring back suave al centro
+        setIsSnapping(true);
+        setDragOffset(0);
+      }
+
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      isDragHorizontalRef.current = null;
+    },
+    [nextMonth, prevMonth],
+  );
+
   // ── Calendar grid ─────────────────────────────────────────────────────────
 
   const daysInMonth = getDaysInMonth(viewY, viewM);
@@ -262,11 +354,13 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
 
   const monthNameLow = (MONTHS_ES[viewM - 1] ?? "").toLowerCase();
 
+  const yearMax = useMemo(() => new Date().getFullYear() + YEAR_FUTURE_OFFSET, []);
+
   const years = useMemo(() => {
     const arr: number[] = [];
-    for (let y = YEAR_MIN; y <= YEAR_MAX; y++) arr.push(y);
+    for (let y = YEAR_MIN; y <= yearMax; y++) arr.push(y);
     return arr;
-  }, []);
+  }, [yearMax]);
 
   const largeDate = formatLargeDisplay(pendingISO);
 
@@ -326,7 +420,7 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
         </div>
 
         {/* ── Body ─────────────────────────────────────────────────────── */}
-        <div className="px-4 py-3">
+        <div className="overflow-hidden px-4 py-3">
           {view === "calendar" ? (
             <>
               {/* Month / year row */}
@@ -376,6 +470,7 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
                 >
                   <div className="grid grid-cols-3">
                     {years.map((y) => (
+
                       <button
                         key={y}
                         type="button"
@@ -398,7 +493,31 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
                   </div>
                 </div>
               ) : (
-                <>
+                /* Swipeable area — arrastrar ← → cambia de mes */
+                <div
+                  key={monthKey}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onTransitionEnd={() => setIsSnapping(false)}
+                  className={`select-none ${
+                    monthKey > 0
+                      ? slideAnimDir === "next"
+                        ? "cal-grid-next"
+                        : "cal-grid-prev"
+                      : ""
+                  }`}
+                  style={{
+                    transform:
+                      dragOffset !== 0
+                        ? `translateX(${dragOffset}px)`
+                        : undefined,
+                    transition: isSnapping
+                      ? "transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+                      : "none",
+                    willChange: "transform",
+                  }}
+                >
                   {/* Weekday headers */}
                   <div className="mb-1 grid grid-cols-7">
                     {DAYS_HEADER.map((d) => (
@@ -445,7 +564,7 @@ function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps)
                       );
                     })}
                   </div>
-                </>
+                </div>
               )}
             </>
           ) : (

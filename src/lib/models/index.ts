@@ -87,3 +87,15 @@ export type Category = {
   iconKey?: string; // key en CATEGORY_ICON_MAP, e.g. "graduation-cap"
   type?: CategoryType; // "expense" | "income" — opcional para compat. con datos previos
 };
+
+// ─── Perfil de usuario (por país) ────────────────────────────────────────────
+
+export type CountryCode = "CL" | "EC";
+
+export type UserProfile = {
+  id: string;
+  userId: string;
+  countryCode: CountryCode;
+  currencyCode: CurrencyCode;
+  createdAt: string;
+};

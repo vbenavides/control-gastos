@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { PointerEvent as ReactPointerEvent, ReactNode, WheelEvent as ReactWheelEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { useAuth } from "@/lib/auth/auth-context";
+import { COUNTRY_CONFIGS, useProfile } from "@/lib/profile/profile-context";
 import {
   ArrowLeftRight,
   ArrowUpDown,
@@ -17,7 +20,6 @@ import {
   FolderOpen,
   History,
   ListChecks,
-  Menu,
   Pencil,
   BarChart3,
   Plus,
@@ -62,7 +64,6 @@ function actionMap(pathname: string): Action[] {
   if (pathname.startsWith("/calendario")) {
     return [
       { label: "Balance", icon: <Scale size={20} strokeWidth={2} /> },
-      { label: "Menú", icon: <Menu size={22} strokeWidth={2} />, href: "/menu" },
     ];
   }
 
@@ -71,21 +72,55 @@ function actionMap(pathname: string): Action[] {
       { label: "Ordenar", icon: <ArrowUpDown size={20} strokeWidth={2} /> },
       { label: "Carpetas", icon: <FolderOpen size={20} strokeWidth={2} /> },
       { label: "Editar presupuesto", icon: <Pencil size={20} strokeWidth={2} />, href: "/presupuesto/configurar" },
-      { label: "Menú", icon: <Menu size={22} strokeWidth={2} />, href: "/menu" },
     ];
   }
 
   if (pathname.startsWith("/historial")) {
     return [
       { label: "Buscar", icon: <Search size={20} strokeWidth={2} /> },
-      { label: "Menú", icon: <Menu size={22} strokeWidth={2} />, href: "/menu" },
     ];
   }
 
   return [
     { label: "Sincronizar", icon: <Cloud size={20} strokeWidth={2} /> },
-    { label: "Menú", icon: <Menu size={22} strokeWidth={2} />, href: "/menu" },
   ];
+}
+
+// ─── User avatar / menu button ───────────────────────────────────────────────
+
+function UserAvatarMenuButton() {
+  const { user } = useAuth();
+
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const fullName = (user?.user_metadata?.full_name ?? user?.email ?? "") as string;
+  const initials = fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return (
+    <Link
+      href="/menu"
+      prefetch={true}
+      aria-label="Abrir menú de usuario"
+      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent)] transition hover:opacity-90 md:h-11 md:w-11"
+    >
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt={fullName || "Avatar"}
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center bg-[var(--accent)] text-[0.8rem] font-bold text-white">
+          {initials || <DollarSign size={16} strokeWidth={2.5} />}
+        </span>
+      )}
+    </Link>
+  );
 }
 
 const QUICK_ACTION_ROUTES: Record<string, string> = {
@@ -99,8 +134,69 @@ const QUICK_ACTION_ROUTES: Record<string, string> = {
   cashback: "/agregar/devolucion-efectivo",
 };
 
-function renderQuickActionIcon(kind: (typeof quickActionItems)[number]["kind"]) {
-  switch (kind) {
+// ─── Country selector ────────────────────────────────────────────────────────
+
+function CountrySelector() {
+  const { activeCountry, setActiveCountry } = useProfile();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const active = COUNTRY_CONFIGS.find((c) => c.code === activeCountry) ?? COUNTRY_CONFIGS[0];
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-label={`País activo: ${active.name}`}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="grid h-10 w-10 place-items-center rounded-2xl text-xl transition hover:bg-white/5 md:h-11 md:w-11"
+      >
+        {active.flag}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[11rem] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_8px_24px_rgba(0,0,0,0.4)] lg:left-auto lg:right-0">
+          {COUNTRY_CONFIGS.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => {
+                setActiveCountry(c.code);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-white/5 ${
+                c.code === activeCountry
+                  ? "text-[var(--accent)]"
+                  : "text-[var(--text-primary)]"
+              }`}
+            >
+              <span className="text-base">{c.flag}</span>
+              <span className="flex-1">{c.name}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{c.currencyCode}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderQuickActionIcon(kind: (typeof quickActionItems)[number]["kind"]) {  switch (kind) {
     case "expense":
       return <ReceiptText size={23} strokeWidth={2} />;
     case "payment":
@@ -373,8 +469,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 pb-0 pt-4 sm:max-w-[680px] sm:px-5 md:max-w-[920px] md:px-6 lg:mx-0 lg:max-w-none lg:flex-1 lg:px-6 lg:pt-5 xl:px-8">
         <header className="mb-4 flex items-center justify-between lg:justify-end">
-          <div className="h-10 w-10 lg:hidden" aria-hidden="true" />
+          <div className="lg:hidden">
+            <CountrySelector />
+          </div>
           <div className="flex items-center gap-2">
+            <div className="hidden lg:block">
+              <CountrySelector />
+            </div>
             {actions.map((action) => {
               const content = (
                 <span className="grid h-10 w-10 place-items-center rounded-2xl text-[var(--text-primary)] transition hover:bg-white/5 md:h-11 md:w-11">
@@ -396,6 +497,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </button>
               );
             })}
+            <UserAvatarMenuButton />
           </div>
         </header>
 

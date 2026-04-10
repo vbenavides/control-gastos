@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 
 import { AppDataProvider } from "@/components/app-data-provider";
+import { AuthProvider } from "@/lib/auth/auth-context";
+import { ProfileProvider } from "@/lib/profile/profile-context";
 
 import "./globals.css";
 
@@ -31,7 +33,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-[var(--app-bg)] font-sans text-[var(--text-primary)]">
-        <AppDataProvider>{children}</AppDataProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            <AppDataProvider>{children}</AppDataProvider>
+          </ProfileProvider>
+        </AuthProvider>
       </body>
     </html>
   );
