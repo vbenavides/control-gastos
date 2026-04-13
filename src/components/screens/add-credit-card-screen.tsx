@@ -28,7 +28,7 @@ import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 
 export function AddCreditCardScreen() {
   const router = useRouter();
-  const { create } = useCreditCards();
+  const { create, isLoading: isDataLoading } = useCreditCards();
 
   const [balance, setBalance] = useState("0");
   const [description, setDescription] = useState("");
@@ -40,12 +40,14 @@ export function AddCreditCardScreen() {
   const [gracePeriodDays, setGracePeriodDays] = useState("10");
   const [paymentReminderEnabled, setPaymentReminderEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const currencyCode = DEFAULT_CURRENCY_CODE;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (isSaving) return;
 
+    setSaveError(null);
     setIsSaving(true);
     try {
       await create({
@@ -68,6 +70,10 @@ export function AddCreditCardScreen() {
       } else {
         router.push("/cuentas?tab=credito");
       }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Error al guardar la tarjeta.";
+      setSaveError(message);
     } finally {
       setIsSaving(false);
     }
@@ -124,9 +130,7 @@ export function AddCreditCardScreen() {
               />
             </div>
 
-            <p className="type-helper mt-3 text-[var(--text-secondary)]">
-              CLP activo por ahora · USD próximamente.
-            </p>
+
           </section>
 
           <section className="mt-10 space-y-0">
@@ -254,10 +258,18 @@ export function AddCreditCardScreen() {
           </section>
 
           <div className="mt-auto pt-8">
+            {saveError ? (
+              <p
+                role="alert"
+                className="type-helper mb-3 rounded-[0.6rem] bg-red-500/10 px-3 py-2 text-center text-red-400"
+              >
+                {saveError}
+              </p>
+            ) : null}
             <div className="border-t border-white/6 px-2 pb-3 pt-4">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || isDataLoading}
                 className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)] disabled:opacity-60"
               >
                 {isSaving ? "Guardando…" : "Guardar"}

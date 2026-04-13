@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Search, Wallet, X } from "lucide-react";
+import { Banknote, Building2, CreditCard, DollarSign, Search, Wallet, X } from "lucide-react";
 
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 import { resolveIcon } from "@/lib/category-icons";
-import type { CategoryType } from "@/lib/models";
+import type { AccountType, CategoryType } from "@/lib/models";
 
 // ─── Sheet animation hook ─────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ function PickerSheetShell({
         aria-label="Cerrar"
         className={[
           "absolute inset-0 transition-[background-color] duration-200",
-          isVisible ? "bg-black/60" : "bg-black/0",
+          isVisible ? "bg-black/55" : "bg-black/0",
         ].join(" ")}
         onClick={onDismiss}
       />
@@ -77,26 +77,31 @@ function PickerSheetShell({
         aria-label={title}
         className={[
           "relative z-10 flex min-h-[68svh] max-h-[88svh] flex-col",
-          "rounded-t-[1.4rem] bg-[#0d1423]",
-          "shadow-[0_-24px_60px_rgba(0,0,0,0.7)]",
+          "rounded-t-[1.4rem] bg-[var(--app-bg-elevated)]",
+          "border-t border-x border-[var(--line)]",
+          "shadow-[0_-20px_60px_rgba(0,0,0,0.55)]",
           "transition-transform duration-[300ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform",
           "sm:mx-auto sm:w-full sm:max-w-[640px] lg:max-w-[720px]",
         ].join(" ")}
         style={{ transform: isVisible ? "translateY(0)" : "translateY(100%)" }}
       >
+        {/* Handle */}
+        <div className="flex shrink-0 justify-center pt-3 pb-1">
+          <div className="h-[3px] w-10 rounded-full bg-white/20" />
+        </div>
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between px-6 py-5">
-          <h3 className="text-[1.05rem] font-semibold text-white">{title}</h3>
+        <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-2">
+          <h3 className="type-subsection-title font-semibold text-[var(--text-primary)]">{title}</h3>
           <button
             type="button"
             onClick={onDismiss}
             aria-label="Cerrar"
-            className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.12] text-white/60 transition hover:bg-white/[0.18] hover:text-white"
+            className="grid h-8 w-8 place-items-center rounded-full bg-[var(--surface)] text-[var(--text-secondary)] transition hover:bg-[var(--surface-strong)] hover:text-[var(--text-primary)]"
           >
             <X size={16} strokeWidth={2.2} />
           </button>
         </div>
-        <div className="h-px shrink-0 bg-white/[0.08]" />
+        <div className="h-px shrink-0 bg-[var(--line)]" />
         {children}
       </div>
     </div>
@@ -105,11 +110,11 @@ function PickerSheetShell({
 
 function SheetFooter({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <div className="shrink-0 border-t border-white/[0.08] px-5 pb-7 pt-4">
+    <div className="shrink-0 border-t border-[var(--line)] px-5 pb-7 pt-4">
       <button
         type="button"
         onClick={onClick}
-        className="w-full rounded-2xl bg-[var(--accent)] py-[0.9rem] text-[0.95rem] font-semibold text-white shadow-[0_8px_24px_rgba(41,187,243,0.2)] transition hover:brightness-105"
+        className="type-body w-full rounded-[0.9rem] bg-[var(--accent)] py-[0.85rem] font-semibold text-white shadow-[0_8px_24px_rgba(41,187,243,0.18)] transition hover:brightness-105"
       >
         {label}
       </button>
@@ -159,23 +164,23 @@ export function CategoryPickerSheet({
   return (
     <PickerSheetShell title="Categoría" isVisible={isVisible} onDismiss={dismiss}>
       {/* Search bar */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-white/[0.08] px-6 py-3">
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--line)] px-6 py-3">
         <input
           type="search"
           placeholder="Buscar"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           autoComplete="off"
-          className="flex-1 bg-transparent text-[0.94rem] text-white outline-none placeholder:text-white/35"
+          className="type-body flex-1 bg-transparent text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
         />
-        <Search size={17} className="shrink-0 text-white/35" />
+        <Search size={17} className="shrink-0 text-[var(--text-tertiary)]" />
       </div>
 
       {/* Category list */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {filtered.length > 0 ? (
           <>
-            <p className="px-6 pb-2 pt-4 text-[0.76rem] font-medium uppercase tracking-wider text-white/35">
+            <p className="px-6 pb-2 pt-4 text-[0.76rem] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
               Sin grupo
             </p>
             {filtered.map((cat) => {
@@ -186,7 +191,7 @@ export function CategoryPickerSheet({
                   key={cat.id}
                   type="button"
                   onClick={() => handleSelect(cat.id)}
-                  className="flex w-full items-center gap-4 px-6 py-3 transition hover:bg-white/[0.04]"
+                  className="flex w-full items-center gap-4 px-6 py-3 transition hover:bg-[var(--surface)]"
                 >
                   <div
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.55rem]"
@@ -196,10 +201,10 @@ export function CategoryPickerSheet({
                   </div>
                   <span
                     className={[
-                      "text-[0.94rem]",
+                      "type-body",
                       isSelected
                         ? "font-medium text-[var(--accent)]"
-                        : "text-white",
+                        : "text-[var(--text-primary)]",
                     ].join(" ")}
                   >
                     {cat.name}
@@ -209,7 +214,7 @@ export function CategoryPickerSheet({
             })}
           </>
         ) : (
-          <p className="px-6 py-12 text-center text-[0.9rem] text-white/35">
+          <p className="type-body px-6 py-12 text-center text-[var(--text-tertiary)]">
             No se encontraron categorías
           </p>
         )}
@@ -268,27 +273,27 @@ export function AccountPickerSheet({
                 key={account.id}
                 type="button"
                 onClick={() => handleSelect(account.id)}
-                className="flex w-full items-center justify-between gap-4 border-b border-white/[0.06] px-6 py-4 transition hover:bg-white/[0.04]"
+                className="flex w-full items-center justify-between gap-4 border-b border-[var(--line)] px-6 py-4 transition hover:bg-[var(--surface)]"
               >
                 <div className="text-left">
                   <p
                     className={[
-                      "text-[0.95rem] font-medium",
-                      isSelected ? "text-[var(--accent)]" : "text-white",
+                      "type-body font-medium",
+                      isSelected ? "text-[var(--accent)]" : "text-[var(--text-primary)]",
                     ].join(" ")}
                   >
                     {account.name}
                   </p>
-                  <p className="mt-0.5 text-[0.82rem] text-white/45">
+                  <p className="type-label mt-0.5 text-[var(--text-secondary)]">
                     ${account.balance.toLocaleString("es-CL")}
                   </p>
                 </div>
-                <Wallet size={20} className="shrink-0 text-white/30" />
+                <Wallet size={20} className="shrink-0 text-[var(--text-tertiary)]" />
               </button>
             );
           })
         ) : (
-          <p className="px-6 py-12 text-center text-[0.9rem] text-white/35">
+          <p className="type-body px-6 py-12 text-center text-[var(--text-tertiary)]">
             No tienes cuentas creadas
           </p>
         )}
@@ -340,33 +345,112 @@ export function CreditCardPickerSheet({
                 key={card.id}
                 type="button"
                 onClick={() => handleSelect(card.id)}
-                className="flex w-full items-center justify-between gap-4 border-b border-white/[0.06] px-6 py-4 transition hover:bg-white/[0.04]"
+                className="flex w-full items-center justify-between gap-4 border-b border-[var(--line)] px-6 py-4 transition hover:bg-[var(--surface)]"
               >
                 <div className="text-left">
                   <p
                     className={[
-                      "text-[0.95rem] font-medium",
-                      isSelected ? "text-[var(--accent)]" : "text-white",
+                      "type-body font-medium",
+                      isSelected ? "text-[var(--accent)]" : "text-[var(--text-primary)]",
                     ].join(" ")}
                   >
                     {card.name}
                   </p>
-                  <p className="mt-0.5 text-[0.82rem] text-white/45">
+                  <p className="type-label mt-0.5 text-[var(--text-secondary)]">
                     ${card.balance.toLocaleString("es-CL")}
                   </p>
                 </div>
-                <CreditCard size={20} className="shrink-0 text-white/30" />
+                <CreditCard size={20} className="shrink-0 text-[var(--text-tertiary)]" />
               </button>
             );
           })
         ) : (
-          <p className="px-6 py-12 text-center text-[0.9rem] text-white/35">
+          <p className="type-body px-6 py-12 text-center text-[var(--text-tertiary)]">
             No tienes tarjetas creadas
           </p>
         )}
       </div>
 
       <SheetFooter label="Agregar Tarjeta" onClick={handleAddCard} />
+    </PickerSheetShell>
+  );
+}
+
+// ─── Account Type Picker Sheet ────────────────────────────────────────────────
+
+const ACCOUNT_TYPE_META: Record<AccountType, { icon: React.ElementType; description: string }> = {
+  Corriente: { icon: Building2, description: "Cuenta bancaria de uso diario" },
+  Ahorro: { icon: DollarSign, description: "Cuenta de ahorros con intereses" },
+  Efectivo: { icon: Banknote, description: "Dinero en efectivo disponible" },
+  Débito: { icon: CreditCard, description: "Tarjeta de débito prepagada" },
+};
+
+export type AccountTypePickerSheetProps = {
+  selected: AccountType;
+  onSelect: (type: AccountType) => void;
+  onClose: () => void;
+};
+
+export function AccountTypePickerSheet({
+  selected,
+  onSelect,
+  onClose,
+}: AccountTypePickerSheetProps) {
+  const { isVisible, dismiss } = useSheetAnimation(onClose);
+
+  function handleSelect(type: AccountType) {
+    onSelect(type);
+    dismiss();
+  }
+
+  const types = Object.keys(ACCOUNT_TYPE_META) as AccountType[];
+
+  return (
+    <PickerSheetShell title="Tipo de cuenta" isVisible={isVisible} onDismiss={dismiss}>
+      <div className="min-h-0 flex-1 overflow-y-auto py-2">
+        {types.map((type) => {
+          const { icon: Icon, description } = ACCOUNT_TYPE_META[type];
+          const isSelected = selected === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => handleSelect(type)}
+              className={[
+                "flex w-full items-center gap-4 px-6 py-4 transition",
+                isSelected ? "bg-[var(--surface)]" : "hover:bg-[var(--surface)]",
+              ].join(" ")}
+            >
+              <div
+                className={[
+                  "grid h-10 w-10 shrink-0 place-items-center rounded-[0.7rem]",
+                  isSelected
+                    ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                    : "bg-[var(--surface-strong)] text-[var(--text-secondary)]",
+                ].join(" ")}
+              >
+                <Icon size={20} strokeWidth={1.9} />
+              </div>
+              <div className="flex-1 text-left">
+                <p
+                  className={[
+                    "type-body font-medium",
+                    isSelected ? "text-[var(--accent)]" : "text-[var(--text-primary)]",
+                  ].join(" ")}
+                >
+                  {type}
+                </p>
+                <p className="type-label mt-0.5 text-[var(--text-tertiary)]">{description}</p>
+              </div>
+              {isSelected ? (
+                <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]" />
+              ) : (
+                <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--line-strong)]" />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </PickerSheetShell>
   );
 }

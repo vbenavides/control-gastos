@@ -69,7 +69,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
 
       const repos = getRepositories(supabase, activeProfile.id);
 
-      const [nextAccounts, nextCards, nextTransactions, nextCategories, nextBudget] =
+      const [nextAccounts, nextCards, nextTransactions, rawCategories, nextBudget] =
         await Promise.all([
           repos.debitAccounts.getAll(),
           repos.creditCards.getAll(),
@@ -77,6 +77,12 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
           repos.categories.getAll(),
           repos.budgetSettings.get(),
         ]);
+
+      // Seed categorías por defecto si el perfil no tiene ninguna todavía
+      const nextCategories =
+        rawCategories.length === 0
+          ? await repos.categories.seedDefaults()
+          : rawCategories;
 
       if (!isActive) return;
       setAccounts(nextAccounts);

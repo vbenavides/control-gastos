@@ -41,6 +41,8 @@ export interface ICategoryRepository {
   create(data: Omit<Category, "id">): Promise<Category>;
   update(id: string, data: Partial<Omit<Category, "id">>): Promise<Category>;
   delete(id: string): Promise<void>;
+  /** Inserta las categorías por defecto. Solo llamar cuando el perfil no tiene ninguna. */
+  seedDefaults(): Promise<Category[]>;
 }
 
 // ─── Configuración de presupuesto ────────────────────────────────────────────

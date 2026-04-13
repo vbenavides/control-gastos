@@ -175,9 +175,7 @@ export function EditDebitAccountScreen() {
             />
           </div>
 
-          <p className="type-helper mt-3 text-[var(--text-secondary)]">
-            Moneda activa: {accountCurrencyCode}. USD próximamente.
-          </p>
+
         </section>
 
         <section className="mt-11 space-y-0">

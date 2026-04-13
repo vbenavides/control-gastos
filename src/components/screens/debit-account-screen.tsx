@@ -383,9 +383,7 @@ export function DebitAccountScreen() {
                 className="type-body mt-3 w-full rounded-[0.75rem] border border-white/12 bg-white/[0.04] px-4 py-3 text-center text-[var(--text-primary)] outline-none transition focus:border-[var(--accent)] focus:bg-white/[0.06]"
               />
 
-              <p className="type-helper mt-3 text-center text-[var(--text-secondary)]">
-                Moneda activa: {account.currencyCode ?? DEFAULT_CURRENCY_CODE}. USD próximamente.
-              </p>
+
             </div>
 
             <div className="mt-6 flex items-center gap-6">

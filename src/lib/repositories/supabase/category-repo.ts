@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Category, CategoryType } from "@/lib/models";
 import type { ICategoryRepository } from "@/lib/repositories/interfaces";
+import { SEED_CATEGORIES } from "@/lib/category-seeds";
 
 type DbRow = {
   id: string;
@@ -94,5 +95,28 @@ export class SupabaseCategoryRepository implements ICategoryRepository {
       .eq("id", id)
       .eq("profile_id", this.profileId);
     if (error) throw error;
+  }
+
+  /**
+   * Inserta las categorías por defecto en un solo request.
+   * Solo se debe llamar cuando el perfil no tiene categorías todavía.
+   */
+  async seedDefaults(): Promise<Category[]> {
+    const rows = SEED_CATEGORIES.map((cat) => ({
+      profile_id: this.profileId,
+      name: cat.name,
+      budget: cat.budget,
+      accent: cat.accent,
+      icon_key: cat.iconKey,
+      type: cat.type,
+    }));
+
+    const { data, error } = await this.supabase
+      .from("categories")
+      .insert(rows)
+      .select();
+
+    if (error) throw error;
+    return ((data ?? []) as DbRow[]).map(rowToModel);
   }
 }
