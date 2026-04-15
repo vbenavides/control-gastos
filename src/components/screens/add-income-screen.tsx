@@ -7,6 +7,7 @@ import { Layers, RotateCcw, SquarePen, Wallet } from "lucide-react";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -32,20 +33,33 @@ import {
   CategoryPickerSheet,
 } from "@/components/screens/picker-sheets";
 
+type IncomeDraft = {
+  amount: string;
+  description: string;
+  depositAccountId: string;
+  paymentDate: string;
+  isRecurring: boolean;
+  autoPayment: boolean;
+  categoryId: string;
+  notes: string;
+};
+
 export function AddIncomeScreen() {
   const router = useRouter();
-  const { accounts, update: updateAccount } = useDebitAccounts();
+  const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { categories } = useCategories();
   const { create: createTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<IncomeDraft>("add-income");
 
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("");
-  const [depositAccountId, setDepositAccountId] = useState("");
-  const [paymentDate, setPaymentDate] = useState(todayISO);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [autoPayment, setAutoPayment] = useState(false);
-  const [categoryId, setCategoryId] = useState("");
-  const [notes, setNotes] = useState("");
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [depositAccountId, setDepositAccountId] = useState(draft?.depositAccountId ?? "");
+  const [paymentDate, setPaymentDate] = useState(draft?.paymentDate ?? todayISO);
+  const [isRecurring, setIsRecurring] = useState(draft?.isRecurring ?? false);
+  const [autoPayment, setAutoPayment] = useState(draft?.autoPayment ?? false);
+  const [categoryId, setCategoryId] = useState(draft?.categoryId ?? "");
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,6 +67,11 @@ export function AddIncomeScreen() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   const recurring = useRecurringSection();
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, description, depositAccountId, paymentDate, isRecurring, autoPayment, categoryId, notes });
+  }, [amount, description, depositAccountId, paymentDate, isRecurring, autoPayment, categoryId, notes, saveDraft]);
 
   // Reopen the correct picker when returning from the add-account/add-category flow
   useEffect(() => {
@@ -78,7 +97,6 @@ export function AddIncomeScreen() {
     setError("");
     setIsSaving(true);
     try {
-      const account = (accounts ?? []).find((a) => a.id === depositAccountId);
       const meta = KIND_META.income;
 
       const recurringNote = isRecurring
@@ -103,9 +121,8 @@ export function AddIncomeScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      if (account) {
-        await updateAccount(depositAccountId, { balance: account.balance + numAmount });
-      }
+      await adjustAccountBalance(depositAccountId, numAmount);
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");

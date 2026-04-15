@@ -12,18 +12,28 @@ export type UseDebitAccountsResult = {
     id: string,
     data: Partial<Omit<DebitAccount, "id" | "createdAt">>,
   ) => Promise<DebitAccount>;
+  /** Suma `delta` al balance de forma atómica en la DB (delta negativo para restar). */
+  adjustBalance: (id: string, delta: number) => Promise<void>;
   /** Elimina la cuenta Y todas sus transacciones asociadas. */
   remove: (id: string) => Promise<void>;
 };
 
 export function useDebitAccounts(): UseDebitAccountsResult {
-  const { accounts, isHydrated, createDebitAccount, updateDebitAccount, removeDebitAccount } = useAppData();
+  const {
+    accounts,
+    isHydrated,
+    createDebitAccount,
+    updateDebitAccount,
+    adjustDebitAccountBalance,
+    removeDebitAccount,
+  } = useAppData();
 
   return {
     accounts,
     isLoading: !isHydrated,
     create: createDebitAccount,
     update: updateDebitAccount,
+    adjustBalance: adjustDebitAccountBalance,
     remove: removeDebitAccount,
   };
 }

@@ -253,7 +253,7 @@ export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomN
   return (
     <>
       <div
-        className="fixed bottom-6 right-4 z-30 transition-transform duration-300 ease-out md:right-6 lg:right-8 xl:bottom-5 xl:right-6"
+        className="fixed bottom-20 right-4 z-30 transition-transform duration-300 ease-out md:bottom-5 md:right-6 xl:right-8"
         style={{ transform: hasBottomNotice ? "translateY(-3.5rem)" : "translateY(0)" }}
       >
         <button
@@ -284,7 +284,7 @@ export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomN
             aria-modal="true"
             aria-labelledby="account-quick-actions-title"
             onWheel={handleSheetWheel}
-            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-8 xl:inset-x-auto xl:bottom-5 xl:right-6 xl:w-[32rem] xl:rounded-[2rem]"
+            className="absolute inset-x-0 bottom-0 flex h-[90svh] w-auto origin-bottom flex-col overflow-hidden rounded-t-[2rem] border border-white/8 bg-[var(--surface)] shadow-[0_-16px_40px_rgba(0,0,0,0.46)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform [@media(max-height:740px)]:h-dvh md:inset-x-6 md:rounded-t-[2.2rem] lg:inset-x-auto lg:bottom-5 lg:right-6 lg:h-auto lg:max-h-[92svh] lg:w-[32rem] lg:rounded-[2rem] xl:right-8"
             style={{
               opacity: isVisible ? 1 : 0.96,
               transform: `translate3d(0, ${sheetTranslateY}, 0)`,

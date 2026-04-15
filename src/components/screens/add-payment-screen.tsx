@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Clock, Layers, RotateCcw, SquarePen, Wallet } from "lucide-react";
+import { Layers, RotateCcw, SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -22,7 +23,6 @@ import {
   NumberPickerSheet,
   RecurringFields,
   SaveButton,
-  TimePickerSheet,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
@@ -33,38 +33,45 @@ import {
   CategoryPickerSheet,
 } from "@/components/screens/picker-sheets";
 
-const REMINDER_DAY_OPTIONS = [
-  { value: "day-before", label: "Día anterior" },
-  { value: "same-day", label: "Mismo día" },
-  { value: "two-days-before", label: "Dos días antes" },
-  { value: "week-before", label: "Una semana antes" },
-];
+type PaymentDraft = {
+  amount: string;
+  description: string;
+  payFromAccountId: string;
+  categoryId: string;
+  dueDate: string;
+  isRecurring: boolean;
+  autoPayment: boolean;
+  notes: string;
+};
 
 export function AddPaymentScreen() {
   const router = useRouter();
-  const { accounts, update: updateAccount } = useDebitAccounts();
+  const { accounts } = useDebitAccounts();
   const { categories } = useCategories();
   const { create: createTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<PaymentDraft>("add-payment");
 
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("");
-  const [payFromAccountId, setPayFromAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [dueDate, setDueDate] = useState(todayISO);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderDay, setReminderDay] = useState("day-before");
-  const [reminderTime, setReminderTime] = useState("10:00");
-  const [autoPayment, setAutoPayment] = useState(false);
-  const [notes, setNotes] = useState("");
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [payFromAccountId, setPayFromAccountId] = useState(draft?.payFromAccountId ?? "");
+  const [categoryId, setCategoryId] = useState(draft?.categoryId ?? "");
+  const [dueDate, setDueDate] = useState(draft?.dueDate ?? todayISO);
+  const [isRecurring, setIsRecurring] = useState(draft?.isRecurring ?? false);
+  const [autoPayment, setAutoPayment] = useState(draft?.autoPayment ?? false);
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const recurring = useRecurringSection();
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, description, payFromAccountId, categoryId, dueDate, isRecurring, autoPayment, notes });
+  }, [amount, description, payFromAccountId, categoryId, dueDate, isRecurring, autoPayment, notes, saveDraft]);
 
   // Reopen the correct picker when returning from the add-account/add-category flow
   useEffect(() => {
@@ -90,15 +97,11 @@ export function AddPaymentScreen() {
     setError("");
     setIsSaving(true);
     try {
-      const account = (accounts ?? []).find((a) => a.id === payFromAccountId);
       const meta = KIND_META.payment;
 
       const noteFragments = [
         notes.trim(),
         isRecurring ? recurring.buildNoteFragment() : "",
-        reminderEnabled
-          ? `Recordatorio: ${REMINDER_DAY_OPTIONS.find((o) => o.value === reminderDay)?.label ?? reminderDay} ${reminderTime}`
-          : "",
         autoPayment ? "Pago automático activado" : "",
       ].filter(Boolean);
 
@@ -114,13 +117,11 @@ export function AddPaymentScreen() {
         iconBackground: meta.iconBackground,
         iconColor: meta.iconColor,
         note: noteFragments.join(" · ") || undefined,
-        statusLabel: autoPayment ? "Pagado" : meta.statusLabel,
+        statusLabel: meta.statusLabel,
+        isPending: true,
       });
 
-      if (autoPayment && account) {
-        await updateAccount(payFromAccountId, { balance: account.balance - numAmount });
-      }
-
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");
@@ -159,6 +160,8 @@ export function AddPaymentScreen() {
               placeholder="Selecciona categoría"
               onClick={() => setShowCategoryPicker(true)}
             />
+
+            {/* Fecha límite del pago futuro */}
             <FormDateField
               id="due-date"
               label="Pagar antes de"
@@ -173,7 +176,6 @@ export function AddPaymentScreen() {
               checked={isRecurring}
               onChange={setIsRecurring}
             />
-
             {isRecurring && (
               <RecurringFields
                 repeatInterval={recurring.repeatInterval}
@@ -186,46 +188,6 @@ export function AddPaymentScreen() {
                 onStopDate={recurring.setStopDate}
               />
             )}
-
-            {/* Recordatorio */}
-            <FormToggleRow
-              label="Recordatorio"
-              checked={reminderEnabled}
-              onChange={setReminderEnabled}
-            />
-
-            {reminderEnabled ? (
-              <>
-                <div className="py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="shrink-0 text-white/55"><Bell size={16} /></span>
-                    <select
-                      value={reminderDay}
-                      onChange={(e) => setReminderDay(e.target.value)}
-                      aria-label="Día del recordatorio"
-                      className="type-body flex-1 appearance-none border-0 bg-transparent py-0 text-[var(--text-primary)] outline-none"
-                    >
-                      {REMINDER_DAY_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value} className="bg-[var(--app-bg)]">
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="border-b border-[var(--line)] py-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowTimePicker(true)}
-                    className="flex w-full items-center gap-3"
-                  >
-                    <span className="shrink-0 text-white/55"><Clock size={16} /></span>
-                    <span className="type-body text-[var(--text-primary)]">{reminderTime}</span>
-                  </button>
-                </div>
-              </>
-            ) : null}
 
             {/* Pago Automático */}
             <AutoPaymentRow checked={autoPayment} onChange={setAutoPayment} />
@@ -267,13 +229,6 @@ export function AddPaymentScreen() {
         />
       )}
 
-      {showTimePicker && (
-        <TimePickerSheet
-          value={reminderTime}
-          onSelect={setReminderTime}
-          onClose={() => setShowTimePicker(false)}
-        />
-      )}
     </TransactionFormLayout>
   );
 }

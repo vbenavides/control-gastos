@@ -7,6 +7,7 @@ import { CreditCard, Wallet } from "lucide-react";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -26,23 +27,38 @@ import {
   CreditCardPickerSheet,
 } from "@/components/screens/picker-sheets";
 
+type CardPaymentDraft = {
+  amount: string;
+  cardId: string;
+  payFromAccountId: string;
+  paymentDate: string;
+  notes: string;
+};
+
 export function AddCardPaymentScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { accounts, update: updateAccount } = useDebitAccounts();
+  const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { cards, update: updateCard } = useCreditCards();
   const { create: createTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<CardPaymentDraft>("add-card-payment");
 
-  const [amount, setAmount] = useState("0");
-  const [cardId, setCardId] = useState(() => searchParams.get("cardId") ?? "");
-  const [payFromAccountId, setPayFromAccountId] = useState("");
-  const [paymentDate, setPaymentDate] = useState(todayISO);
-  const [notes, setNotes] = useState("");
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [cardId, setCardId] = useState(draft?.cardId ?? searchParams.get("cardId") ?? "");
+  const [payFromAccountId, setPayFromAccountId] = useState(draft?.payFromAccountId ?? "");
+  const [paymentDate, setPaymentDate] = useState(draft?.paymentDate ?? todayISO);
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, cardId, payFromAccountId, paymentDate, notes });
+  }, [amount, cardId, payFromAccountId, paymentDate, notes, saveDraft]);
 
   // Reopen the correct picker when returning from create flows
   useEffect(() => {
@@ -70,7 +86,6 @@ export function AddCardPaymentScreen() {
     setError("");
     setIsSaving(true);
     try {
-      const account = (accounts ?? []).find((a) => a.id === payFromAccountId);
       const card = (cards ?? []).find((c) => c.id === cardId);
       const meta = KIND_META.cardPayment;
 
@@ -89,15 +104,14 @@ export function AddCardPaymentScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      if (account) {
-        await updateAccount(payFromAccountId, { balance: account.balance - numericAmount });
-      }
+      await adjustAccountBalance(payFromAccountId, -numericAmount);
 
       if (card) {
         const newBalance = Math.max(0, card.balance - numericAmount);
         await updateCard(cardId, { balance: newBalance });
       }
 
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");

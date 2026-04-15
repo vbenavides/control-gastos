@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowLeftRight,
   Calendar,
   ChartNoAxesColumn,
   Check,
+  Clock,
   CreditCard,
   Filter,
   HandCoins,
   List,
+  Layers3,
   ShoppingBag,
 } from "lucide-react";
 import { useMemo } from "react";
@@ -25,6 +29,7 @@ import { formatAmountCLP } from "@/lib/currency";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import type { Transaction } from "@/lib/models";
 
 export function HomeScreen() {
   const cardIcons = [ShoppingBag, CreditCard, HandCoins, ArrowLeftRight];
@@ -52,12 +57,31 @@ export function HomeScreen() {
     [transactions, currentMonth, currentYear],
   );
 
+  // Gastos reales (pagos ya realizados, no pendientes)
   const totalExpenses = useMemo(
     () =>
       monthTransactions
-        .filter((t) => t.kind === "expense" || t.kind === "payment")
+        .filter((t) => (t.kind === "expense" || t.kind === "payment") && !t.isPending)
         .reduce((sum, t) => sum + t.amount, 0),
     [monthTransactions],
+  );
+
+  // Gasto proyectado = suma de pagos pendientes
+  const projectedExpenses = useMemo(
+    () =>
+      (transactions ?? [])
+        .filter((t) => t.isPending)
+        .reduce((sum, t) => sum + t.amount, 0),
+    [transactions],
+  );
+
+  // Lista de pagos pendientes ordenados por fecha
+  const pendingPayments = useMemo(
+    () =>
+      (transactions ?? [])
+        .filter((t): t is Transaction => t.isPending === true)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [transactions],
   );
 
   const totalIncome = useMemo(
@@ -126,13 +150,13 @@ export function HomeScreen() {
                 <div>
                   <p>Balance Proyectado</p>
                   <p className="mt-1 text-lg font-medium text-[var(--text-primary)]">
-                    {formatAmountCLP(actualBalance)}
+                    {formatAmountCLP(actualBalance - projectedExpenses)}
                   </p>
                 </div>
                 <div>
                   <p>Gasto Proyectado</p>
                   <p className="mt-1 text-lg font-medium text-[var(--text-primary)]">
-                    {formatAmountCLP(totalExpenses)}
+                    {formatAmountCLP(projectedExpenses)}
                   </p>
                 </div>
               </div>
@@ -221,13 +245,102 @@ export function HomeScreen() {
           title="Próximo"
           action={<List size={20} className="text-[var(--text-secondary)]" />}
         />
-        <EmptyState
-          icon={<Check size={26} />}
-          title="¡Todo pagado!"
-          description="No hay compromisos próximos."
-          className="pt-8 md:pt-12"
-        />
+        {pendingPayments.length === 0 ? (
+          <EmptyState
+            icon={<Check size={26} />}
+            title="¡Todo pagado!"
+            description="No hay compromisos próximos."
+            className="pt-8 md:pt-12"
+          />
+        ) : (
+          <div className="space-y-3">
+            {pendingPayments.map((tx) => (
+              <PendingPaymentRow
+                key={tx.id}
+                transaction={tx}
+                currentBalance={actualBalance - projectedExpenses}
+                accounts={accounts ?? []}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
+  );
+}
+
+// ─── Fila de pago pendiente en sección "Próximo" ──────────────────────────────
+
+import type { DebitAccount } from "@/lib/models";
+
+function PendingPaymentRow({
+  transaction,
+  currentBalance,
+  accounts,
+}: {
+  transaction: Transaction;
+  currentBalance: number;
+  accounts: DebitAccount[];
+}) {
+  const today = new Date().toISOString().split("T")[0] ?? "";
+  const isOverdue = transaction.date < today;
+  const accountName =
+    accounts.find((a) => a.id === transaction.accountId)?.name ?? "";
+
+  // Formato de fecha legible: "1 abr 2026 a las 17:49"
+  const formattedDate = (() => {
+    if (!transaction.date) return "";
+    const [year, month, day] = transaction.date.split("-");
+    const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+    const m = MONTHS[(parseInt(month ?? "1", 10) - 1)];
+    return `${parseInt(day ?? "1", 10)} ${m} ${year}`;
+  })();
+
+  const balanceAfter = currentBalance - transaction.amount;
+
+  return (
+    <Link
+      href={`/cuentas/debito/${transaction.accountId}/transaccion/${transaction.id}`}
+      className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
+    >
+      {/* Cabecera: fecha + badges */}
+      <div className="flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 md:px-4">
+        <span className="type-label text-white/84">{formattedDate}</span>
+        <div className="flex items-center gap-1.5">
+          {accountName ? (
+            <span className="type-label rounded-full bg-white/10 px-2 py-0.5 text-white/70">
+              {accountName.slice(0, 1).toUpperCase()}
+            </span>
+          ) : null}
+          {isOverdue ? (
+            <span className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-white/60">
+              <AlertTriangle size={11} strokeWidth={2.5} />
+            </span>
+          ) : (
+            <span className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-white/60">
+              <Clock size={11} strokeWidth={2.5} />
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Cuerpo */}
+      <div className="flex items-center gap-3 px-3 py-3 md:px-4">
+        <div
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
+          style={{ backgroundColor: transaction.iconBackground, color: transaction.iconColor }}
+        >
+          <Layers3 size={15} strokeWidth={2.2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="type-body truncate text-[var(--text-primary)]">{transaction.description}</p>
+          <p className="type-label mt-1 text-white/55">{accountName}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="type-body text-[var(--text-primary)]">{formatAmountCLP(transaction.amount)}</p>
+          <p className="type-label mt-1 text-white/45">{formatAmountCLP(balanceAfter)}</p>
+        </div>
+      </div>
+    </Link>
   );
 }

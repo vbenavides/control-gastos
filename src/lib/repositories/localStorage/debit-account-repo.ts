@@ -63,6 +63,14 @@ export class LocalStorageDebitAccountRepository implements IDebitAccountReposito
     return updated;
   }
 
+  async adjustBalance(id: string, delta: number): Promise<void> {
+    const accounts = readAll();
+    const index = accounts.findIndex((a) => a.id === id);
+    if (index === -1) throw new Error(`DebitAccount ${id} not found`);
+    accounts[index] = { ...accounts[index], balance: accounts[index].balance + delta };
+    writeAll(accounts);
+  }
+
   async delete(id: string): Promise<void> {
     writeAll(readAll().filter((a) => a.id !== id));
   }

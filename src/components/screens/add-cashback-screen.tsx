@@ -6,6 +6,7 @@ import { SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -23,20 +24,35 @@ import {
 } from "@/components/screens/transaction-form-base";
 import { AccountPickerSheet } from "@/components/screens/picker-sheets";
 
+type CashbackDraft = {
+  amount: string;
+  description: string;
+  depositAccountId: string;
+  date: string;
+  notes: string;
+};
+
 export function AddCashbackScreen() {
   const router = useRouter();
-  const { accounts, update: updateAccount } = useDebitAccounts();
+  const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { create: createTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<CashbackDraft>("add-cashback");
 
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("Cashback");
-  const [depositAccountId, setDepositAccountId] = useState("");
-  const [date, setDate] = useState(todayISO);
-  const [notes, setNotes] = useState("");
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [description, setDescription] = useState(draft?.description ?? "Cashback");
+  const [depositAccountId, setDepositAccountId] = useState(draft?.depositAccountId ?? "");
+  const [date, setDate] = useState(draft?.date ?? todayISO);
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, description, depositAccountId, date, notes });
+  }, [amount, description, depositAccountId, date, notes, saveDraft]);
 
   // Reopen picker when returning from the add-account flow
   useEffect(() => {
@@ -59,7 +75,6 @@ export function AddCashbackScreen() {
     setError("");
     setIsSaving(true);
     try {
-      const account = (accounts ?? []).find((a) => a.id === depositAccountId);
       const meta = KIND_META.cashback;
 
       await createTransaction({
@@ -77,10 +92,9 @@ export function AddCashbackScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      if (account) {
-        await updateAccount(depositAccountId, { balance: account.balance + numAmount });
-      }
+      await adjustAccountBalance(depositAccountId, numAmount);
 
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");

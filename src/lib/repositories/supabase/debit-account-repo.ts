@@ -88,6 +88,14 @@ export class SupabaseDebitAccountRepository implements IDebitAccountRepository {
     return rowToModel(updated as DbRow);
   }
 
+  async adjustBalance(id: string, delta: number): Promise<void> {
+    const { error } = await this.supabase.rpc("adjust_account_balance", {
+      p_account_id: id,
+      p_delta: delta,
+    });
+    if (error) throw error;
+  }
+
   async delete(id: string): Promise<void> {
     const { error } = await this.supabase
       .from("debit_accounts")

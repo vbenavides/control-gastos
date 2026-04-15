@@ -132,39 +132,35 @@ export function CreditCardPaymentScheduleConfigScreen() {
   // ── Estados de carga / no encontrado ──
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
-          <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
       </div>
     );
   }
 
   if (!card) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3">
-          <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
-            <Link href="/cuentas?tab=credito" aria-label="Volver" className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]">
-              <ArrowLeft size={22} />
-            </Link>
-            <h1 className="type-subsection-title text-center font-bold text-[var(--text-primary)]">—</h1>
-            <div aria-hidden="true" />
-          </header>
-          <div className="type-body flex flex-1 items-center justify-center text-center text-[var(--text-secondary)]">
-            No encontramos esta tarjeta.
-          </div>
+      <div className="flex h-full flex-col">
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-1">
+          <Link href="/cuentas?tab=credito" aria-label="Volver" className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]">
+            <ArrowLeft size={22} />
+          </Link>
+          <h1 className="type-subsection-title text-center font-bold text-[var(--text-primary)]">—</h1>
+          <div aria-hidden="true" />
+        </header>
+        <div className="type-body flex flex-1 items-center justify-center text-center text-[var(--text-secondary)]">
+          No encontramos esta tarjeta.
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+    <>
+    <div className="mx-auto w-full max-w-[36rem] px-4 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
 
         {/* Header */}
-        <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-1 pb-2">
           <Link
             href={backHref}
             prefetch={true}
@@ -179,8 +175,8 @@ export function CreditCardPaymentScheduleConfigScreen() {
           <div aria-hidden="true" />
         </header>
 
-        {/* Body scrollable */}
-        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto pb-6">
+        {/* Body */}
+        <div className="pb-6">
 
           {/* ── Sección: Generación de Pagos ── */}
           <div className="mt-6">
@@ -378,7 +374,7 @@ export function CreditCardPaymentScheduleConfigScreen() {
 
         {/* Botón Aplicar — solo en modo automático */}
         {currentMode === "automatic" && (
-          <div className="shrink-0 border-t border-white/[0.06] pb-6 pt-4">
+          <div className="sticky bottom-0 z-10 bg-[var(--app-bg)] border-t border-white/[0.06] pb-6 pt-4">
             <button
               type="button"
               disabled={isSaving}
@@ -416,6 +412,6 @@ export function CreditCardPaymentScheduleConfigScreen() {
           onClose={() => setShowTimePicker(false)}
         />
       )}
-    </div>
+    </>
   );
 }

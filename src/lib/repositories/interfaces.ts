@@ -7,6 +7,8 @@ export interface IDebitAccountRepository {
   getById(id: string): Promise<DebitAccount | null>;
   create(data: Omit<DebitAccount, "id" | "createdAt">): Promise<DebitAccount>;
   update(id: string, data: Partial<Omit<DebitAccount, "id" | "createdAt">>): Promise<DebitAccount>;
+  /** Suma `delta` al balance actual de forma atómica (delta negativo para restar). */
+  adjustBalance(id: string, delta: number): Promise<void>;
   delete(id: string): Promise<void>;
 }
 

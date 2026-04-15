@@ -104,28 +104,23 @@ export function EditCreditCardScreen() {
   // ── Estado: cargando ──
   if (isDataLoading) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
-          <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
       </div>
     );
   }
 
-  // ── Estado: no encontrada ──
   if (!card) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
-          <p className="type-body text-[var(--text-secondary)]">Tarjeta no encontrada.</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <p className="type-body text-[var(--text-secondary)]">Tarjeta no encontrada.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
+    <>
+      <div className="mx-auto w-full max-w-[36rem] px-4 pb-4 pt-3 md:max-w-[40rem] md:px-6 md:pb-6 md:pt-4 lg:max-w-[680px] lg:px-8">
         <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
           <button
             type="button"
@@ -342,7 +337,7 @@ export function EditCreditCardScreen() {
           onSelect={(day) => setPaymentDay(day)}
         />
       )}
-    </div>
+    </>
   );
 }
 

@@ -7,6 +7,7 @@ import { AlignJustify, CreditCard, Info, Layers, Navigation, SquarePen } from "l
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput, sanitizeNumericInput, normalizeNumericBlurValue, getNumericInputWidth } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -81,6 +82,18 @@ function calcBillingInfo(
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
+type InstallmentsDraft = {
+  amount: string;
+  description: string;
+  categoryId: string;
+  cardId: string;
+  payments: string;
+  monthlyStr: string;
+  purchaseDate: string;
+  buyNowPayLater: boolean;
+  payLaterDate: string;
+};
+
 export function AddInstallmentsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,21 +102,28 @@ export function AddInstallmentsScreen() {
   const { cards, update: updateCard } = useCreditCards();
   const { categories } = useCategories();
   const { create: createTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<InstallmentsDraft>("add-installments");
 
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [cardId, setCardId] = useState(preselectedCardId);
-  const [payments, setPayments] = useState("12");
-  const [monthlyStr, setMonthlyStr] = useState("0");
-  const [purchaseDate, setPurchaseDate] = useState(todayISO);
-  const [buyNowPayLater, setBuyNowPayLater] = useState(false);
-  const [payLaterDate, setPayLaterDate] = useState(todayISO);
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [categoryId, setCategoryId] = useState(draft?.categoryId ?? "");
+  const [cardId, setCardId] = useState(draft?.cardId ?? preselectedCardId);
+  const [payments, setPayments] = useState(draft?.payments ?? "12");
+  const [monthlyStr, setMonthlyStr] = useState(draft?.monthlyStr ?? "0");
+  const [purchaseDate, setPurchaseDate] = useState(draft?.purchaseDate ?? todayISO);
+  const [buyNowPayLater, setBuyNowPayLater] = useState(draft?.buyNowPayLater ?? false);
+  const [payLaterDate, setPayLaterDate] = useState(draft?.payLaterDate ?? todayISO);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, description, categoryId, cardId, payments, monthlyStr, purchaseDate, buyNowPayLater, payLaterDate });
+  }, [amount, description, categoryId, cardId, payments, monthlyStr, purchaseDate, buyNowPayLater, payLaterDate, saveDraft]);
 
   // Reopen the correct picker when returning from create flows
   useEffect(() => {
@@ -204,6 +224,7 @@ export function AddInstallmentsScreen() {
         await updateCard(cardId, { balance: card.balance + numericAmount });
       }
 
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");

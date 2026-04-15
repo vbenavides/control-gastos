@@ -42,6 +42,7 @@ import { useMemo, useState } from "react";
 
 import { CircularProgress, ProgressBar, SurfaceCard } from "@/components/ui-kit";
 import { formatAmountCLP } from "@/lib/currency";
+import { sortTransactionsDesc } from "@/lib/date";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
@@ -161,13 +162,13 @@ export function CategoryDetailScreen() {
   // Transacciones de esta categoría en el mes visto
   const catTransactions = useMemo(() => {
     if (!category) return [];
-    return (transactions ?? [])
-      .filter((t) => {
+    return sortTransactionsDesc(
+      (transactions ?? []).filter((t) => {
         if (t.category !== category.name) return false;
         const d = new Date(t.date);
         return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    );
   }, [transactions, category, viewMonth, viewYear]);
 
   const accountMap = useMemo(() => {

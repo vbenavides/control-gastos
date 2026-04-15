@@ -7,6 +7,7 @@ import { Layers, SquarePen, Wallet } from "lucide-react";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -27,23 +28,39 @@ import {
   CategoryPickerSheet,
 } from "@/components/screens/picker-sheets";
 
+type ExpenseDraft = {
+  amount: string;
+  description: string;
+  date: string;
+  accountId: string;
+  categoryId: string;
+  notes: string;
+};
+
 export function AddExpenseScreen() {
   const router = useRouter();
-  const { accounts, update: updateAccount } = useDebitAccounts();
+  const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { categories } = useCategories();
   const { create: createTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<ExpenseDraft>("add-expense");
 
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState(todayISO);
-  const [accountId, setAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [notes, setNotes] = useState("");
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [date, setDate] = useState(draft?.date ?? todayISO);
+  const [accountId, setAccountId] = useState(draft?.accountId ?? "");
+  const [categoryId, setCategoryId] = useState(draft?.categoryId ?? "");
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, description, date, accountId, categoryId, notes });
+  }, [amount, description, date, accountId, categoryId, notes, saveDraft]);
 
   // Reopen the correct picker when returning from the add-account/add-category flow
   useEffect(() => {
@@ -69,7 +86,6 @@ export function AddExpenseScreen() {
     setError("");
     setIsSaving(true);
     try {
-      const account = (accounts ?? []).find((a) => a.id === accountId);
       const meta = KIND_META.expense;
 
       await createTransaction({
@@ -87,10 +103,9 @@ export function AddExpenseScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      if (account) {
-        await updateAccount(accountId, { balance: account.balance - numAmount });
-      }
+      await adjustAccountBalance(accountId, -numAmount);
 
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");

@@ -51,10 +51,8 @@ export function todayISO(): string {
 
 export function TransactionFormLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-dvh flex-col bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 sm:max-w-[40rem] sm:px-5 md:max-w-[700px] md:px-6 lg:max-w-[820px] lg:px-8">
-        {children}
-      </div>
+    <div className="mx-auto w-full max-w-[36rem] sm:max-w-[40rem] sm:px-1 md:max-w-[700px] md:px-2 lg:max-w-[820px] lg:px-4">
+      {children}
     </div>
   );
 }
@@ -64,7 +62,7 @@ export function TransactionFormLayout({ children }: { children: ReactNode }) {
 export function TransactionFormHeader({ title }: { title: string }) {
   const router = useRouter();
   return (
-    <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center pt-3 pb-1">
+    <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-1">
       <button
         type="button"
         onClick={() => router.back()}
@@ -85,7 +83,7 @@ export function TransactionFormHeader({ title }: { title: string }) {
 
 export function FormScrollBody({ children }: { children: ReactNode }) {
   return (
-    <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto">
+    <div>
       {children}
     </div>
   );
@@ -432,7 +430,7 @@ export function FormNotesField({
 
 export function SaveButton({ isSaving = false }: { isSaving?: boolean }) {
   return (
-    <div className="shrink-0 border-t border-white/[0.06] pb-6 pt-4">
+    <div className="sticky bottom-0 z-10 bg-[var(--app-bg)] border-t border-white/[0.06] pb-6 pt-4">
       <button
         type="submit"
         disabled={isSaving}

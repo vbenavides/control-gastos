@@ -121,10 +121,8 @@ export function CreditCardDetailScreen() {
   // ── Estado: cargando ──
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
-          <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
       </div>
     );
   }
@@ -132,25 +130,22 @@ export function CreditCardDetailScreen() {
   // ── Estado: no encontrada ──
   if (!card) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3">
-          <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
-            <Link
-              href="/cuentas?tab=credito"
-              aria-label="Volver a cuentas"
-              className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
-            >
-              <ArrowLeft size={22} />
-            </Link>
-            <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
-              Tarjeta no encontrada
-            </h1>
-            <div aria-hidden="true" />
-          </header>
-
-          <div className="type-body flex flex-1 items-center justify-center text-center text-[var(--text-secondary)]">
-            No encontramos esta tarjeta.
-          </div>
+      <div className="flex h-full flex-col">
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-1">
+          <Link
+            href="/cuentas?tab=credito"
+            aria-label="Volver a cuentas"
+            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
+          >
+            <ArrowLeft size={22} />
+          </Link>
+          <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
+            Tarjeta no encontrada
+          </h1>
+          <div aria-hidden="true" />
+        </header>
+        <div className="type-body flex flex-1 items-center justify-center text-center text-[var(--text-secondary)]">
+          No encontramos esta tarjeta.
         </div>
       </div>
     );
@@ -161,7 +156,7 @@ export function CreditCardDetailScreen() {
   const sameDay = card.statementDay === card.paymentDay;
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
+    <>
       {topNotice ? (
         <div
           role="status"
@@ -175,10 +170,10 @@ export function CreditCardDetailScreen() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex h-dvh w-full max-w-[36rem] flex-col px-4 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
+      <div className="mx-auto w-full max-w-[36rem] px-4 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
 
-        {/* ── Header fijo (no scrollea) ── */}
-        <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
+        {/* ── Header fijo ── */}
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
           <Link
             href="/cuentas?tab=credito"
             prefetch={true}
@@ -207,8 +202,7 @@ export function CreditCardDetailScreen() {
           </Link>
         </header>
 
-        {/* ── Área scrollable ── */}
-        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto pb-24">
+        <div className="pb-24">
 
           {/* Balance */}
           <section className="px-1 pt-8 text-center md:pt-10">
@@ -480,6 +474,6 @@ export function CreditCardDetailScreen() {
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

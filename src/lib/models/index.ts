@@ -77,6 +77,12 @@ export type Transaction = {
   iconColor: string; // hex color
   note?: string;
   statusLabel: string;
+  /** true = pago registrado pero aún no realizado (no resta balance) */
+  isPending?: boolean;
+  /** ISO timestamp de creación — usado para desempate en el ordenamiento */
+  createdAt?: string;
+  /** ID de la transacción contraparte en una transferencia */
+  transferPairId?: string;
 };
 
 // ─── Categoría ──────────────────────────────────────────────────────────────

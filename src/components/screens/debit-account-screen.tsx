@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Check,
+  Clock,
   HeartPulse,
   Layers3,
   Pencil,
@@ -17,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccountQuickActionsFab } from "@/components/account-quick-actions-fab";
 import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
-import { formatShortDateEs } from "@/lib/date";
+import { formatShortDateEs, sortTransactionsDesc } from "@/lib/date";
 import type { Transaction, TransactionIconKind } from "@/lib/models";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import {
@@ -68,10 +69,9 @@ export function DebitAccountScreen() {
 
   const recentTransactions = useMemo(
     () =>
-      (transactions ?? [])
-        .filter((t) => t.accountId === accountId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10),
+      sortTransactionsDesc(
+        (transactions ?? []).filter((t) => t.accountId === accountId)
+      ).slice(0, 10),
     [transactions, accountId],
   );
 
@@ -160,10 +160,8 @@ export function DebitAccountScreen() {
   // Estado: cargando
   if (accountsLoading) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
-          <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
       </div>
     );
   }
@@ -171,32 +169,30 @@ export function DebitAccountScreen() {
   // Estado: no encontrada
   if (!account) {
     return (
-      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-8 pt-3 md:max-w-[40rem] md:px-6 lg:max-w-[680px] lg:px-8">
-          <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
-            <Link
-              href="/cuentas?tab=debito"
-              aria-label="Volver a cuentas"
-              className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
-            >
-              <ArrowLeft size={22} />
-            </Link>
-            <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
-              Cuenta no encontrada
-            </h1>
-            <div aria-hidden="true" />
-          </header>
+      <div className="flex h-full flex-col">
+        <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center pt-1">
+          <Link
+            href="/cuentas?tab=debito"
+            aria-label="Volver a cuentas"
+            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
+          >
+            <ArrowLeft size={22} />
+          </Link>
+          <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
+            Cuenta no encontrada
+          </h1>
+          <div aria-hidden="true" />
+        </header>
 
-          <div className="type-body flex flex-1 items-center justify-center px-4 text-center text-[var(--text-secondary)]">
-            No encontramos esta cuenta.
-          </div>
+        <div className="type-body flex flex-1 items-center justify-center px-4 text-center text-[var(--text-secondary)]">
+          No encontramos esta cuenta.
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
+    <>
       {topNotice ? (
         <div
           role="status"
@@ -220,8 +216,8 @@ export function DebitAccountScreen() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex h-dvh w-full max-w-[36rem] flex-col px-4 pb-0 pt-3 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
-        <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
+      <div>
+        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-white/[0.06] bg-[var(--app-bg)] pb-4 pt-1">
           <Link
             href="/cuentas?tab=debito"
             prefetch={true}
@@ -245,7 +241,7 @@ export function DebitAccountScreen() {
           </Link>
         </header>
 
-        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto pb-24">
+        <div className="pb-24">
           <section className="px-1 pt-8 text-center md:pt-10">
             <p className="type-body text-[var(--text-primary)]">Balance</p>
             <p className="type-display mt-1 font-medium text-[var(--text-primary)]">
@@ -277,44 +273,49 @@ export function DebitAccountScreen() {
             ) : (
               <>
                 <div className="mt-4 space-y-3 md:space-y-3.5">
-                  {recentTransactions.map((transaction: Transaction) => (
-                    <Link
-                      key={transaction.id}
-                      href={`/cuentas/debito/${account.id}/transaccion/${transaction.id}`}
-                      prefetch={true}
-                      className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
-                    >
-                      <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
-                        <span>{formatShortDateEs(transaction.date)}</span>
-                        <Check size={15} strokeWidth={2.3} className="shrink-0" />
-                      </div>
-
-                      <div className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 md:min-h-[5.15rem] md:px-4 md:py-3.5">
-                        <div
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
-                          style={{
-                            backgroundColor: transaction.iconBackground,
-                            color: transaction.iconColor,
-                          }}
-                        >
-                          {renderTransactionIcon(transaction.iconKind)}
+                  {recentTransactions.map((transaction: Transaction) => {
+                    const isPending = transaction.isPending === true;
+                    return (
+                      <Link
+                        key={transaction.id}
+                        href={`/cuentas/debito/${account.id}/transaccion/${transaction.id}`}
+                        prefetch={true}
+                        className={`block overflow-hidden rounded-[0.9rem] border shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition ${isPending ? "border-white/[0.04] bg-[#131a1f] hover:bg-[#161e24]" : "border-white/[0.06] bg-[#17212b] hover:border-white/[0.11] hover:bg-[#1b2732]"}`}
+                      >
+                        <div className={`type-label flex min-h-[2rem] items-center justify-between border-b px-3 md:min-h-[2.2rem] md:px-4 ${isPending ? "border-white/[0.04] bg-white/[0.03] text-[#ffffffb5]" : "border-white/[0.06] bg-white/[0.065] text-white/84"}`}>
+                          <span>{formatShortDateEs(transaction.date)}</span>
+                          {isPending
+                            ? <Clock size={14} strokeWidth={2.3} className="shrink-0 text-[#ffffffb5]" />
+                            : <Check size={15} strokeWidth={2.3} className="shrink-0" />}
                         </div>
 
-                        <div className="min-w-0 flex-1 self-center">
-                          <p className="type-body truncate text-[var(--text-primary)]">
-                            {transaction.description}
-                          </p>
-                          <p className="type-label mt-1.5 text-white/82">{account.name}</p>
-                        </div>
+                        <div className="flex min-h-[4.8rem] items-center gap-3 px-3 py-3 md:min-h-[5.15rem] md:px-4 md:py-3.5">
+                          <div
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
+                            style={{
+                              backgroundColor: isPending ? "#1a2028" : transaction.iconBackground,
+                              color: isPending ? "#ffffffb5" : transaction.iconColor,
+                            }}
+                          >
+                            {renderTransactionIcon(transaction.iconKind)}
+                          </div>
 
-                        <div className="shrink-0 self-center text-right">
-                          <p className="type-body text-[var(--text-primary)]">
-                            {formatAmountCLP(transaction.amount)}
-                          </p>
+                          <div className="min-w-0 flex-1 self-center">
+                            <p className={`type-body truncate ${isPending ? "text-[#ffffffb5]" : "text-[var(--text-primary)]"}`}>
+                              {transaction.description}
+                            </p>
+                            <p className={`type-label mt-1.5 ${isPending ? "text-[#ffffffb5]" : "text-white/82"}`}>{account.name}</p>
+                          </div>
+
+                          <div className="shrink-0 self-center text-right">
+                            <p className={`type-body ${isPending ? "text-[#ffffffb5]" : "text-[var(--text-primary)]"}`}>
+                              {formatAmountCLP(transaction.amount)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    );
+                  })}
                 </div>
 
                 <div className="flex justify-center px-1 pb-5 pt-7">
@@ -397,6 +398,6 @@ export function DebitAccountScreen() {
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

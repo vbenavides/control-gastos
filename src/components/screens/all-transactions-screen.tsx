@@ -13,6 +13,7 @@ import {
   getDefaultFilterState,
 } from "@/components/transaction-filters";
 import { formatAmountCLP } from "@/lib/currency";
+import { sortTransactionsDesc } from "@/lib/date";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
@@ -109,9 +110,7 @@ export function AllTransactionsScreen() {
       );
     }
 
-    return list.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
+    return sortTransactionsDesc(list);
   }, [transactions, applied, searchQuery]);
 
   // ── Totales ──
@@ -185,11 +184,10 @@ export function AllTransactionsScreen() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex h-dvh w-full max-w-[36rem] flex-col md:max-w-[860px] lg:max-w-[1160px] xl:max-w-[1280px]">
+    <div className="mx-auto w-full max-w-[36rem] md:max-w-[860px] lg:max-w-[1160px] xl:max-w-[1280px]">
 
         {/* ── Top navigation bar ── */}
-        <header className="shrink-0 px-4 pt-3 md:px-6 lg:px-8">
+        <header className="sticky top-0 z-10 bg-[var(--app-bg)] px-4 pt-3 md:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             {/* Volver: router.back() preserva el scroll de la página anterior */}
             <button
@@ -285,8 +283,8 @@ export function AllTransactionsScreen() {
           </div>
         </header>
 
-        {/* ── Scrollable body ── */}
-        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6 lg:px-8">
+        {/* ── Body ── */}
+        <div className="px-4 pb-10 md:px-6 lg:px-8">
 
           {/* Totales */}
           <div className="border-b border-white/[0.06] py-3">
@@ -325,7 +323,6 @@ export function AllTransactionsScreen() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Filter sheet */}
       {sheetOpen && (
@@ -339,6 +336,6 @@ export function AllTransactionsScreen() {
           onClose={() => setSheetOpen(false)}
         />
       )}
-    </div>
+    </div>  
   );
 }

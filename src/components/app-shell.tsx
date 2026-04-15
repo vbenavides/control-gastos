@@ -428,7 +428,42 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="h-dvh overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] lg:flex">
+    <div className="h-dvh overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] md:flex">
+      {/* ── Sidebar tablet: solo íconos ── */}
+      <aside className="hidden w-[68px] shrink-0 flex-col items-center border-r border-[var(--line)] bg-[rgba(7,16,25,0.88)] py-6 md:flex md:h-dvh md:overflow-y-auto lg:hidden">
+        <div className="mb-7">
+          <div className="grid h-11 w-11 place-items-center rounded-[0.9rem] bg-gradient-to-br from-[#35c7ff] to-[#0b79ae] text-white shadow-[0_10px_24px_rgba(41,187,243,0.24)]">
+            <DollarSign size={18} strokeWidth={2.5} />
+          </div>
+        </div>
+
+        <nav aria-label="Navegación principal tablet">
+          <ul className="flex flex-col items-center gap-1">
+            {navigationItems.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href;
+
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    prefetch={true}
+                    aria-label={label}
+                    className={`grid h-11 w-11 place-items-center rounded-xl transition ${
+                      isActive
+                        ? "bg-[var(--accent)] text-white shadow-[0_8px_20px_rgba(41,187,243,0.2)]"
+                        : "text-[var(--text-secondary)] hover:bg-white/4 hover:text-white"
+                    }`}
+                  >
+                    <Icon size={22} strokeWidth={2.1} />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </aside>
+
+      {/* ── Sidebar PC: ícono + texto ── */}
       <aside className="hidden w-[240px] shrink-0 flex-col border-r border-[var(--line)] bg-[rgba(7,16,25,0.88)] px-3 py-7 lg:flex lg:h-dvh lg:overflow-y-auto">
         <div className="mb-9 flex flex-col items-center">
           <div className="grid h-20 w-20 place-items-center rounded-[1.5rem] bg-gradient-to-br from-[#35c7ff] to-[#0b79ae] text-white shadow-[0_18px_40px_rgba(41,187,243,0.24)]">
@@ -464,13 +499,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 pb-0 pt-4 sm:max-w-[680px] sm:px-5 md:max-w-[920px] md:px-6 lg:mx-0 lg:max-w-none lg:flex-1 lg:px-6 lg:pt-5 xl:px-8">
-        <header className="mb-4 flex items-center justify-between lg:justify-end">
-          <div className="lg:hidden">
+      <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 pb-0 pt-4 sm:max-w-[680px] sm:px-5 md:mx-0 md:max-w-none md:flex-1 md:px-5 md:pt-4 lg:px-6 lg:pt-5 xl:px-8">
+        <header className="mb-4 flex items-center justify-between md:justify-end">
+          <div className="md:hidden">
             <CountrySelector />
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden lg:block">
+            <div className="hidden md:block">
               <CountrySelector />
             </div>
             {actions.map((action) => {
@@ -502,7 +537,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="w-full lg:px-2">{children}</div>
         </main>
 
-        <nav className="z-20 -mx-4 mt-3 shrink-0 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 lg:hidden sm:-mx-5 md:-mx-6">
+        <nav className="z-20 -mx-4 mt-3 shrink-0 border-t border-white/8 bg-[var(--app-bg)] px-5 pb-3 pt-1.5 md:hidden sm:-mx-5">
           <ul className="grid grid-cols-5 items-center gap-2">
             {navigationItems.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
@@ -529,7 +564,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <div
-        className="fixed bottom-20 right-4 z-30 transition-transform duration-300 ease-out md:right-6 lg:bottom-5 lg:right-6 xl:right-8"
+        className="fixed bottom-20 right-4 z-30 transition-transform duration-300 ease-out md:bottom-5 md:right-6 xl:right-8"
         style={{ transform: hasBottomNotice ? "translateY(-4.75rem)" : "translateY(0)" }}
       >
         <button

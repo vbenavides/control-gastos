@@ -43,6 +43,24 @@ function parseDateParts(value: string): DateParts | null {
   };
 }
 
+/**
+ * Ordena transacciones: más reciente primero.
+ * Mismo día → más recientemente ingresado primero (createdAt desc, luego posición en array invertida).
+ */
+export function sortTransactionsDesc<T extends { date: string; createdAt?: string }>(
+  list: T[],
+): T[] {
+  return [...list].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    if (dateB !== dateA) return dateB - dateA;
+    // Desempate: createdAt desc
+    const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return cb - ca;
+  });
+}
+
 export function formatShortDateEs(value: string): string {
   const parts = parseDateParts(value);
 

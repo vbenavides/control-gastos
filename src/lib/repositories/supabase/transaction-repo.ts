@@ -18,6 +18,9 @@ type DbRow = {
   icon_color: string | null;
   note: string | null;
   status_label: string | null;
+  is_pending: boolean | null;
+  created_at: string | null;
+  transfer_pair_id: string | null;
 };
 
 function rowToModel(row: DbRow): Transaction {
@@ -35,6 +38,9 @@ function rowToModel(row: DbRow): Transaction {
     iconColor: row.icon_color ?? "#fff",
     note: row.note ?? undefined,
     statusLabel: row.status_label ?? "",
+    isPending: row.is_pending ?? false,
+    createdAt: row.created_at ?? undefined,
+    transferPairId: row.transfer_pair_id ?? undefined,
   };
 }
 
@@ -93,6 +99,8 @@ export class SupabaseTransactionRepository implements ITransactionRepository {
         icon_color: data.iconColor,
         note: data.note,
         status_label: data.statusLabel,
+        is_pending: data.isPending ?? false,
+        transfer_pair_id: data.transferPairId ?? null,
       })
       .select()
       .single();
@@ -114,6 +122,8 @@ export class SupabaseTransactionRepository implements ITransactionRepository {
     if (data.iconColor !== undefined) patch.icon_color = data.iconColor;
     if (data.note !== undefined) patch.note = data.note;
     if (data.statusLabel !== undefined) patch.status_label = data.statusLabel;
+    if (data.isPending !== undefined) patch.is_pending = data.isPending;
+    if (data.transferPairId !== undefined) patch.transfer_pair_id = data.transferPairId;
 
     const { data: updated, error } = await this.supabase
       .from("transactions")

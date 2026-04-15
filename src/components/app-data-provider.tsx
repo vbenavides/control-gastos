@@ -26,6 +26,8 @@ type AppDataContextValue = {
     id: string,
     data: Partial<Omit<DebitAccount, "id" | "createdAt">>,
   ) => Promise<DebitAccount>;
+  /** Suma `delta` al balance de forma atómica (delta negativo para restar). Actualiza el estado local. */
+  adjustDebitAccountBalance: (id: string, delta: number) => Promise<void>;
   removeDebitAccount: (id: string) => Promise<void>;
   createCreditCard: (data: Omit<CreditCard, "id" | "createdAt">) => Promise<CreditCard>;
   updateCreditCard: (
@@ -125,6 +127,21 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
         prev ? prev.map((item) => (item.id === id ? account : item)) : [account],
       );
       return account;
+    },
+    [repos],
+  );
+
+  const adjustDebitAccountBalance = useCallback(
+    async (id: string, delta: number): Promise<void> => {
+      if (!repos) throw new Error("No active profile");
+      await repos.debitAccounts.adjustBalance(id, delta);
+      setAccounts((prev) =>
+        prev
+          ? prev.map((item) =>
+              item.id === id ? { ...item, balance: item.balance + delta } : item,
+            )
+          : prev,
+      );
     },
     [repos],
   );
@@ -254,6 +271,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       isHydrated,
       createDebitAccount,
       updateDebitAccount,
+      adjustDebitAccountBalance,
       removeDebitAccount,
       createCreditCard,
       updateCreditCard,
@@ -275,6 +293,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       isHydrated,
       createDebitAccount,
       updateDebitAccount,
+      adjustDebitAccountBalance,
       removeDebitAccount,
       createCreditCard,
       updateCreditCard,

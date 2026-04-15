@@ -6,6 +6,7 @@ import { RotateCcw, SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 import { parseNumericInput } from "@/lib/numeric-input";
 import { KIND_META } from "@/lib/transaction-defaults";
 
@@ -28,19 +29,32 @@ import {
 } from "@/components/screens/transaction-form-base";
 import { AccountPickerSheet } from "@/components/screens/picker-sheets";
 
+type TransferDraft = {
+  amount: string;
+  description: string;
+  fromAccountId: string;
+  toAccountId: string;
+  date: string;
+  isRecurring: boolean;
+  autoPayment: boolean;
+  notes: string;
+};
+
 export function AddTransferScreen() {
   const router = useRouter();
-  const { accounts, update: updateAccount } = useDebitAccounts();
-  const { create: createTransaction } = useTransactions();
+  const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
+  const { create: createTransaction, update: updateTransaction } = useTransactions();
+  const { readDraft, saveDraft, clearDraft } = useFormDraft<TransferDraft>("add-transfer");
 
-  const [amount, setAmount] = useState("0");
-  const [description, setDescription] = useState("");
-  const [fromAccountId, setFromAccountId] = useState("");
-  const [toAccountId, setToAccountId] = useState("");
-  const [date, setDate] = useState(todayISO);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [autoPayment, setAutoPayment] = useState(false);
-  const [notes, setNotes] = useState("");
+  const draft = readDraft();
+  const [amount, setAmount] = useState(draft?.amount ?? "0");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [fromAccountId, setFromAccountId] = useState(draft?.fromAccountId ?? "");
+  const [toAccountId, setToAccountId] = useState(draft?.toAccountId ?? "");
+  const [date, setDate] = useState(draft?.date ?? todayISO);
+  const [isRecurring, setIsRecurring] = useState(draft?.isRecurring ?? false);
+  const [autoPayment, setAutoPayment] = useState(draft?.autoPayment ?? false);
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +62,11 @@ export function AddTransferScreen() {
   const [showToAccountPicker, setShowToAccountPicker] = useState(false);
 
   const recurring = useRecurringSection();
+
+  // Persist draft on every relevant change
+  useEffect(() => {
+    saveDraft({ amount, description, fromAccountId, toAccountId, date, isRecurring, autoPayment, notes });
+  }, [amount, description, fromAccountId, toAccountId, date, isRecurring, autoPayment, notes, saveDraft]);
 
   // Reopen the correct picker when returning from the add-account flow
   useEffect(() => {
@@ -88,7 +107,7 @@ export function AddTransferScreen() {
         : "";
       const noteStr = [notes.trim(), recurringNote].filter(Boolean).join(" · ") || undefined;
 
-      await createTransaction({
+      const txFrom = await createTransaction({
         accountId: fromAccountId,
         amount: numAmount,
         description: desc,
@@ -103,7 +122,7 @@ export function AddTransferScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      await createTransaction({
+      const txTo = await createTransaction({
         accountId: toAccountId,
         amount: numAmount,
         description: desc,
@@ -118,13 +137,16 @@ export function AddTransferScreen() {
         statusLabel: meta.statusLabel,
       });
 
-      if (fromAccount) {
-        await updateAccount(fromAccountId, { balance: fromAccount.balance - numAmount });
-      }
-      if (toAccount) {
-        await updateAccount(toAccountId, { balance: toAccount.balance + numAmount });
-      }
+      // Vincular las dos transacciones entre sí
+      await Promise.all([
+        updateTransaction(txFrom.id, { transferPairId: txTo.id }),
+        updateTransaction(txTo.id, { transferPairId: txFrom.id }),
+      ]);
 
+      await adjustAccountBalance(fromAccountId, -numAmount);
+      await adjustAccountBalance(toAccountId, numAmount);
+
+      clearDraft();
       router.back();
     } catch {
       setError("Ocurrió un error al guardar. Intenta de nuevo.");

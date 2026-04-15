@@ -22,6 +22,7 @@ import {
   getDefaultFilterState,
 } from "@/components/transaction-filters";
 import { formatAmountCLP } from "@/lib/currency";
+import { sortTransactionsDesc } from "@/lib/date";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
@@ -94,9 +95,7 @@ export function HistoryScreen() {
       );
     }
 
-    return list.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
+    return sortTransactionsDesc(list);
   }, [transactions, applied, searchQuery]);
 
   // ── Sheet open ──
