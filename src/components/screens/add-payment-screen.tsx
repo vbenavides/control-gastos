@@ -22,6 +22,7 @@ import {
   NumberPickerSheet,
   RecurringFields,
   SaveButton,
+  TimePickerSheet,
   TransactionFormHeader,
   TransactionFormLayout,
   todayISO,
@@ -61,6 +62,7 @@ export function AddPaymentScreen() {
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const recurring = useRecurringSection();
 
@@ -213,16 +215,14 @@ export function AddPaymentScreen() {
                 </div>
 
                 <div className="border-b border-[var(--line)] py-3">
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowTimePicker(true)}
+                    className="flex w-full items-center gap-3"
+                  >
                     <span className="shrink-0 text-white/55"><Clock size={16} /></span>
-                    <input
-                      type="time"
-                      value={reminderTime}
-                      onChange={(e) => setReminderTime(e.target.value)}
-                      aria-label="Hora del recordatorio"
-                      className="type-body border-0 bg-transparent p-0 text-[var(--text-primary)] outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:hidden"
-                    />
-                  </div>
+                    <span className="type-body text-[var(--text-primary)]">{reminderTime}</span>
+                  </button>
                 </div>
               </>
             ) : null}
@@ -264,6 +264,14 @@ export function AddPaymentScreen() {
           selected={categoryId}
           onSelect={setCategoryId}
           onClose={() => setShowCategoryPicker(false)}
+        />
+      )}
+
+      {showTimePicker && (
+        <TimePickerSheet
+          value={reminderTime}
+          onSelect={setReminderTime}
+          onClose={() => setShowTimePicker(false)}
         />
       )}
     </TransactionFormLayout>

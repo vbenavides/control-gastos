@@ -26,7 +26,6 @@ import {
   ReceiptText,
   RotateCcw,
   Scale,
-  Search,
   Wallet,
   House,
 } from "lucide-react";
@@ -76,9 +75,7 @@ function actionMap(pathname: string): Action[] {
   }
 
   if (pathname.startsWith("/historial")) {
-    return [
-      { label: "Buscar", icon: <Search size={20} strokeWidth={2} /> },
-    ];
+    return [];
   }
 
   return [

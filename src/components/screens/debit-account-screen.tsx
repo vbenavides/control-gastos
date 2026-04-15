@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccountQuickActionsFab } from "@/components/account-quick-actions-fab";
 import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
+import { formatShortDateEs } from "@/lib/date";
 import type { Transaction, TransactionIconKind } from "@/lib/models";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import {
@@ -48,15 +49,6 @@ function renderTransactionIcon(kind: TransactionIconKind) {
     case "utensils":
       return <UtensilsCrossed size={15} strokeWidth={2.2} />;
   }
-}
-
-function formatDateLabel(isoDate: string): string {
-  const date = new Date(isoDate);
-  const months = [
-    "ene", "feb", "mar", "abr", "may", "jun",
-    "jul", "ago", "sep", "oct", "nov", "dic",
-  ];
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 export function DebitAccountScreen() {
@@ -293,7 +285,7 @@ export function DebitAccountScreen() {
                       className="block overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11] hover:bg-[#1b2732]"
                     >
                       <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
-                        <span>{formatDateLabel(transaction.date)}</span>
+                        <span>{formatShortDateEs(transaction.date)}</span>
                         <Check size={15} strokeWidth={2.3} className="shrink-0" />
                       </div>
 

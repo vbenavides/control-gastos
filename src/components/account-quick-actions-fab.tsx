@@ -8,6 +8,8 @@ import {
   ArrowLeftRight,
   BadgeDollarSign,
   BadgePercent,
+  CalendarCheck,
+  CreditCard,
   FileText,
   Plus,
   ReceiptText,
@@ -23,6 +25,8 @@ const QUICK_ACTION_ROUTES: Record<string, string> = {
   income: "/agregar/ingreso",
   transfer: "/agregar/transferencia",
   refund: "/agregar/reembolso",
+  installments: "/agregar/compra-a-meses",
+  cardPayment: "/agregar/pago-tarjeta",
   cashback: "/agregar/devolucion-efectivo",
 };
 
@@ -45,6 +49,10 @@ function renderQuickActionIcon(kind: (typeof accountQuickActionItems)[number]["k
       return <ArrowLeftRight size={23} strokeWidth={2} />;
     case "refund":
       return <RotateCcw size={23} strokeWidth={2} />;
+    case "installments":
+      return <CalendarCheck size={23} strokeWidth={2} />;
+    case "cardPayment":
+      return <CreditCard size={23} strokeWidth={2} />;
     case "cashback":
       return <BadgePercent size={23} strokeWidth={2} />;
   }

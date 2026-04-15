@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { CreditCard, CurrencyCode } from "@/lib/models";
+import type { CreditCard, CurrencyCode, PaymentScheduleMode } from "@/lib/models";
 import type { ICreditCardRepository } from "@/lib/repositories/interfaces";
 
 type DbRow = {
@@ -16,6 +16,7 @@ type DbRow = {
   payment_day: number | null;
   grace_period_days: number | null;
   payment_reminder_enabled: boolean;
+  payment_schedule_mode: string | null;
   created_at: string;
 };
 
@@ -32,6 +33,7 @@ function rowToModel(row: DbRow): CreditCard {
     paymentDay: row.payment_day ?? 1,
     gracePeriodDays: row.grace_period_days ?? 0,
     paymentReminderEnabled: row.payment_reminder_enabled,
+    paymentScheduleMode: (row.payment_schedule_mode as PaymentScheduleMode) ?? "manual",
     createdAt: row.created_at,
   };
 }
@@ -78,6 +80,7 @@ export class SupabaseCreditCardRepository implements ICreditCardRepository {
         payment_day: data.paymentDay,
         grace_period_days: data.gracePeriodDays,
         payment_reminder_enabled: data.paymentReminderEnabled,
+        payment_schedule_mode: data.paymentScheduleMode ?? "manual",
       })
       .select()
       .single();
@@ -101,6 +104,8 @@ export class SupabaseCreditCardRepository implements ICreditCardRepository {
     if (data.gracePeriodDays !== undefined) patch.grace_period_days = data.gracePeriodDays;
     if (data.paymentReminderEnabled !== undefined)
       patch.payment_reminder_enabled = data.paymentReminderEnabled;
+    if (data.paymentScheduleMode !== undefined)
+      patch.payment_schedule_mode = data.paymentScheduleMode;
 
     const { data: updated, error } = await this.supabase
       .from("credit_cards")

@@ -138,7 +138,7 @@ type CalendarModalProps = {
   onCancel: () => void;
 };
 
-function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps) {
+export function CalendarModal({ value, label, onAccept, onCancel }: CalendarModalProps) {
   const today = currentTodayISO();
   const initialISO = value || today;
   const initialParsed = parseISO(initialISO) ?? parseISO(today)!;

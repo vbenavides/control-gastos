@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { AddCardPaymentScreen } from "@/components/screens/add-card-payment-screen";
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AddCardPaymentPage() {
-  return <AddCardPaymentScreen />;
+  return (
+    <Suspense fallback={null}>
+      <AddCardPaymentScreen />
+    </Suspense>
+  );
 }

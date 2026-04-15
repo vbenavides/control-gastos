@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Bell,
@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
 import {
@@ -27,9 +27,19 @@ import {
 } from "@/lib/numeric-input";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 
-export function AddCreditCardScreen() {
+export function EditCreditCardScreen() {
+  const params = useParams<{ cardId: string }>();
   const router = useRouter();
-  const { create, isLoading: isDataLoading } = useCreditCards();
+  const cardId = typeof params.cardId === "string" ? params.cardId : "";
+
+  const { cards, update, isLoading: isDataLoading } = useCreditCards();
+
+  const card = useMemo(
+    () => (cards ?? []).find((c) => c.id === cardId) ?? null,
+    [cards, cardId],
+  );
+
+  const currencyCode = DEFAULT_CURRENCY_CODE;
 
   const [balance, setBalance] = useState("0");
   const [description, setDescription] = useState("");
@@ -40,48 +50,78 @@ export function AddCreditCardScreen() {
   const [paymentDay, setPaymentDay] = useState(1);
   const [gracePeriodDays, setGracePeriodDays] = useState("10");
   const [paymentReminderEnabled, setPaymentReminderEnabled] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showStatementDayPicker, setShowStatementDayPicker] = useState(false);
   const [showPaymentDayPicker, setShowPaymentDayPicker] = useState(false);
-  const currencyCode = DEFAULT_CURRENCY_CODE;
+
+  // Pre-cargar los datos del card cuando estén disponibles
+  useEffect(() => {
+    if (!card || initialized) return;
+    setBalance(String(card.balance));
+    setDescription(card.name);
+    setLastFourDigits(card.last4);
+    setCreditLimit(String(card.limit));
+    setAnnualInterestRate(String(card.interestRate));
+    setStatementDay(card.statementDay);
+    setPaymentDay(card.paymentDay);
+    setGracePeriodDays(String(card.gracePeriodDays));
+    setPaymentReminderEnabled(card.paymentReminderEnabled);
+    setInitialized(true);
+  }, [card, initialized]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (isSaving) return;
+    if (isSaving || !card) return;
 
     setSaveError(null);
     setIsSaving(true);
     try {
-      await create({
+      await update(card.id, {
         name: description.trim() || "Sin nombre",
         last4: lastFourDigits.slice(0, 4),
         balance: parseNumericInput(balance),
         limit: parseNumericInput(creditLimit),
         currencyCode,
         interestRate: parseNumericInput(annualInterestRate),
-        statementDay: statementDay,
-        paymentDay: paymentDay,
+        statementDay,
+        paymentDay,
         gracePeriodDays: parseInt(gracePeriodDays, 10) || 10,
         paymentReminderEnabled,
-        paymentScheduleMode: "manual",
       });
-      const hasReturnPicker =
-        typeof window !== "undefined" &&
-        !!sessionStorage.getItem("__returnPicker");
-      if (hasReturnPicker) {
-        router.back();
-      } else {
-        router.push("/cuentas?tab=credito");
-      }
+      router.push(`/cuentas/tarjeta/${card.id}`);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Error al guardar la tarjeta.";
+        err instanceof Error ? err.message : "Error al guardar los cambios.";
       setSaveError(message);
     } finally {
       setIsSaving(false);
     }
   };
+
+  // ── Estado: cargando ──
+  if (isDataLoading) {
+    return (
+      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
+          <p className="type-body text-[var(--text-secondary)]">Cargando…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Estado: no encontrada ──
+  if (!card) {
+    return (
+      <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col items-center justify-center px-4">
+          <p className="type-body text-[var(--text-secondary)]">Tarjeta no encontrada.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
@@ -89,24 +129,15 @@ export function AddCreditCardScreen() {
         <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
           <button
             type="button"
-            onClick={() => {
-              const hasReturnPicker =
-                typeof window !== "undefined" &&
-                !!sessionStorage.getItem("__returnPicker");
-              if (hasReturnPicker) {
-                router.back();
-              } else {
-                router.push("/cuentas?tab=credito");
-              }
-            }}
-            aria-label="Volver a cuentas"
+            onClick={() => router.back()}
+            aria-label="Volver"
             className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
           >
             <ArrowLeft size={22} />
           </button>
 
           <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
-            Agregar tarjeta de crédito
+            Editar tarjeta
           </h1>
 
           <div aria-hidden="true" />
@@ -127,14 +158,21 @@ export function AddCreditCardScreen() {
                 type="text"
                 inputMode="numeric"
                 value={formatMoneyInput(balance, currencyCode)}
-                onChange={(event) => setBalance(sanitizeNumericInput(stripMoneyFormat(event.target.value, currencyCode), "integer"))}
-                onBlur={() => setBalance((current) => normalizeNumericBlurValue(current, "integer"))}
+                onChange={(event) =>
+                  setBalance(
+                    sanitizeNumericInput(
+                      stripMoneyFormat(event.target.value, currencyCode),
+                      "integer",
+                    ),
+                  )
+                }
+                onBlur={() =>
+                  setBalance((current) => normalizeNumericBlurValue(current, "integer"))
+                }
                 style={{ width: getNumericInputWidth(formatMoneyInput(balance, currencyCode)) }}
                 className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
               />
             </div>
-
-
           </section>
 
           <section className="mt-10 space-y-0">
@@ -153,7 +191,9 @@ export function AddCreditCardScreen() {
                 id="credit-card-last-four"
                 icon={<CreditCard size={16} className="shrink-0 text-white/92" />}
                 value={lastFourDigits}
-                onChange={(value) => setLastFourDigits(value.replace(/\D/g, "").slice(0, 4))}
+                onChange={(value) =>
+                  setLastFourDigits(value.replace(/\D/g, "").slice(0, 4))
+                }
                 placeholder=""
                 inputMode="numeric"
               />
@@ -213,7 +253,9 @@ export function AddCreditCardScreen() {
                 id="credit-card-grace-period"
                 icon={<CalendarDays size={16} className="shrink-0 text-white/92" />}
                 value={gracePeriodDays}
-                onChange={(value) => setGracePeriodDays(value.replace(/\D/g, "").slice(0, 2))}
+                onChange={(value) =>
+                  setGracePeriodDays(value.replace(/\D/g, "").slice(0, 2))
+                }
                 placeholder="10"
                 inputMode="numeric"
               />
@@ -276,14 +318,14 @@ export function AddCreditCardScreen() {
                 disabled={isSaving || isDataLoading}
                 className="type-body flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[var(--accent)] px-6 font-medium text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)] disabled:opacity-60"
               >
-                {isSaving ? "Guardando…" : "Guardar"}
+                {isSaving ? "Guardando…" : "Guardar cambios"}
               </button>
             </div>
           </div>
         </form>
       </div>
 
-      {/* ── Day picker sheets ───────────────────────────────────────────────── */}
+      {/* ── Day picker sheets ── */}
       {showStatementDayPicker && (
         <DayPickerSheet
           title="Día de corte"
@@ -304,7 +346,7 @@ export function AddCreditCardScreen() {
   );
 }
 
-// ─── Day items (1–30 + 0 = "Último día del mes") ──────────────────────────────
+// ─── Day items ────────────────────────────────────────────────────────────────
 
 const DAY_ITEMS = [...Array.from({ length: 30 }, (_, i) => i + 1), 0] as const;
 
@@ -328,31 +370,20 @@ function DayPickerSheet({
   const [isVisible, setIsVisible] = useState(false);
   const selectedRef = useRef<HTMLButtonElement>(null);
 
-  // Slide-up animation on mount + lock body scroll
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
-    requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    requestAnimationFrame(() => setIsVisible(true));
+    return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // Scroll selected item into view once visible
   useEffect(() => {
     if (!isVisible) return;
     selectedRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
   }, [isVisible]);
 
-  // Keyboard close
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
-    };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -370,7 +401,6 @@ function DayPickerSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Backdrop */}
       <button
         type="button"
         aria-label={`Cerrar selector de ${title}`}
@@ -381,7 +411,6 @@ function DayPickerSheet({
         onClick={handleClose}
       />
 
-      {/* Sheet — slides up from bottom, centered on desktop */}
       <div
         role="dialog"
         aria-modal="true"
@@ -396,7 +425,6 @@ function DayPickerSheet({
         ].join(" ")}
         style={{ transform: isVisible ? "translateY(0)" : "translateY(100%)" }}
       >
-        {/* Fixed header */}
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-6 py-4">
           <h3 className="text-[1rem] font-semibold text-[var(--text-primary)]">Día</h3>
           <button
@@ -409,12 +437,10 @@ function DayPickerSheet({
           </button>
         </div>
 
-        {/* Scrollable list */}
         <div className="flex-1 overflow-y-auto">
           {DAY_ITEMS.map((day) => {
             const isSelected = value === day;
             const isLast = day === 0;
-
             return (
               <button
                 key={day}
@@ -423,9 +449,7 @@ function DayPickerSheet({
                 onClick={() => handleSelect(day)}
                 className={[
                   "w-full border-b border-[var(--line)] py-[0.85rem] text-center transition",
-                  isLast
-                    ? "text-[1rem] font-semibold"
-                    : "text-[1.05rem] font-normal",
+                  isLast ? "text-[1rem] font-semibold" : "text-[1.05rem] font-normal",
                   isSelected
                     ? "text-[var(--accent)]"
                     : "text-[var(--text-primary)] hover:bg-white/[0.03]",
@@ -467,6 +491,8 @@ function DayPickerField({
   );
 }
 
+// ─── FormField ────────────────────────────────────────────────────────────────
+
 function FormField({
   htmlFor,
   label,
@@ -479,7 +505,9 @@ function FormField({
   withTopPadding?: boolean;
 }>) {
   return (
-    <div className={`border-b border-[var(--line-strong)] pb-2.5 ${withTopPadding ? "pt-2.5" : ""}`}>
+    <div
+      className={`border-b border-[var(--line-strong)] pb-2.5 ${withTopPadding ? "pt-2.5" : ""}`}
+    >
       <label htmlFor={htmlFor} className="type-label mb-1 block text-[var(--text-primary)]">
         {label}
       </label>
@@ -487,6 +515,8 @@ function FormField({
     </div>
   );
 }
+
+// ─── InlineInput ──────────────────────────────────────────────────────────────
 
 function InlineInput({
   id,
@@ -519,6 +549,8 @@ function InlineInput({
   );
 }
 
+// ─── InlineAmountInput ────────────────────────────────────────────────────────
+
 function InlineAmountInput({
   id,
   icon,
@@ -549,7 +581,9 @@ function InlineAmountInput({
           inputMode={mode === "decimal" ? "decimal" : "numeric"}
           value={displayValue}
           onChange={(event) => {
-            const raw = isMoney ? stripMoneyFormat(event.target.value, currencyCode) : event.target.value;
+            const raw = isMoney
+              ? stripMoneyFormat(event.target.value, currencyCode)
+              : event.target.value;
             onChange(sanitizeNumericInput(raw, mode));
           }}
           onBlur={() => onChange(normalizeNumericBlurValue(value, mode))}
@@ -561,7 +595,7 @@ function InlineAmountInput({
   );
 }
 
-
+// ─── ReminderRow ──────────────────────────────────────────────────────────────
 
 function ReminderRow({
   icon,

@@ -1,17 +1,28 @@
 import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
-import type { CreditCard, CurrencyCode } from "@/lib/models";
+import type { CreditCard, CurrencyCode, PaymentScheduleMode } from "@/lib/models";
 import type { ICreditCardRepository } from "@/lib/repositories/interfaces";
 
 const STORAGE_KEY = "cgapp_credit_cards_v1";
 
-type StoredCreditCard = Omit<CreditCard, "currencyCode"> & {
+type StoredCreditCard = Omit<CreditCard, "currencyCode" | "paymentScheduleMode"> & {
   currencyCode?: CurrencyCode;
+  paymentScheduleMode?: PaymentScheduleMode;
 };
 
 function normalizeCard(card: StoredCreditCard): CreditCard {
   return {
     ...card,
     currencyCode: card.currencyCode ?? DEFAULT_CURRENCY_CODE,
+    paymentScheduleMode: card.paymentScheduleMode ?? "manual",
+    // Campos opcionales de modo automático — se preservan tal cual si existen
+    autoPayFromAccountId: card.autoPayFromAccountId,
+    autoPayAmountMode: card.autoPayAmountMode,
+    autoPayFixedAmount: card.autoPayFixedAmount,
+    autoPayScheduleDay: card.autoPayScheduleDay,
+    autoPayReminderEnabled: card.autoPayReminderEnabled,
+    autoPayReminderHour: card.autoPayReminderHour,
+    autoPayReminderMinute: card.autoPayReminderMinute,
+    autoPayCashbackCountsAsPayment: card.autoPayCashbackCountsAsPayment,
   };
 }
 

@@ -15,6 +15,9 @@ export type DebitAccount = {
 
 // ─── Tarjeta de crédito ─────────────────────────────────────────────────────
 
+export type PaymentScheduleMode = "manual" | "automatic";
+export type AutoPaymentAmountMode = "statement_balance" | "fixed_amount";
+
 export type CreditCard = {
   id: string;
   name: string;
@@ -27,6 +30,16 @@ export type CreditCard = {
   paymentDay: number; // día de pago (1-31)
   gracePeriodDays: number;
   paymentReminderEnabled: boolean;
+  paymentScheduleMode: PaymentScheduleMode; // "manual" por defecto
+  // ── Campos para modo automático ──
+  autoPayFromAccountId?: string;       // cuenta débito desde la que se paga
+  autoPayAmountMode?: AutoPaymentAmountMode; // "statement_balance" por defecto
+  autoPayFixedAmount?: number;         // monto fijo si autoPayAmountMode = "fixed_amount"
+  autoPayScheduleDay?: number;         // día del mes para programar el pago (1-31)
+  autoPayReminderEnabled?: boolean;    // recordatorio activo
+  autoPayReminderHour?: number;        // hora 24h (0-23)
+  autoPayReminderMinute?: number;      // minuto (0-59)
+  autoPayCashbackCountsAsPayment?: boolean; // cashback cuenta como pago
   createdAt: string; // ISO date
 };
 

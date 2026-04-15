@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CreditCard, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
@@ -28,12 +28,13 @@ import {
 
 export function AddCardPaymentScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accounts, update: updateAccount } = useDebitAccounts();
   const { cards, update: updateCard } = useCreditCards();
   const { create: createTransaction } = useTransactions();
 
   const [amount, setAmount] = useState("0");
-  const [cardId, setCardId] = useState("");
+  const [cardId, setCardId] = useState(() => searchParams.get("cardId") ?? "");
   const [payFromAccountId, setPayFromAccountId] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayISO);
   const [notes, setNotes] = useState("");

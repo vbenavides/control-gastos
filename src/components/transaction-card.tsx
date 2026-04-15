@@ -11,25 +11,7 @@ import {
 
 import type { Transaction, TransactionIconKind } from "@/lib/models";
 import { formatAmountCLP } from "@/lib/currency";
-
-function formatDateLabel(isoDate: string): string {
-  const date = new Date(isoDate);
-  const months = [
-    "ene",
-    "feb",
-    "mar",
-    "abr",
-    "may",
-    "jun",
-    "jul",
-    "ago",
-    "sep",
-    "oct",
-    "nov",
-    "dic",
-  ];
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
-}
+import { formatShortDateEs } from "@/lib/date";
 
 function renderTransactionIcon(kind: TransactionIconKind) {
   switch (kind) {
@@ -62,7 +44,7 @@ export function TransactionCard({
   return (
     <div className="overflow-hidden rounded-[0.9rem] border border-white/[0.06] bg-[#17212b] shadow-[0_12px_24px_rgba(0,0,0,0.14)] transition hover:border-white/[0.11]">
       <div className="type-label flex min-h-[2rem] items-center justify-between border-b border-white/[0.06] bg-white/[0.065] px-3 text-white/84 md:min-h-[2.2rem] md:px-4">
-        <span>{formatDateLabel(transaction.date)}</span>
+        <span>{formatShortDateEs(transaction.date)}</span>
         <Check size={15} strokeWidth={2.3} className="shrink-0" />
       </div>
 

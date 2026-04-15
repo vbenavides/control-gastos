@@ -2,23 +2,18 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Check,
-  CreditCard,
-  MessageSquare,
-  ShoppingCart,
-  SquarePen,
-  Trash2,
-} from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Clock, Layers, Trash2, Wallet } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { formatAmountCLP } from "@/lib/currency";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
+import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { parseNumericInput, sanitizeNumericInput, stripMoneyFormat, formatMoneyInput, getNumericInputWidth, normalizeNumericBlurValue } from "@/lib/numeric-input";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
+import { FormDateField, FormNotesField, FormPickerField, FormTextField } from "@/components/screens/transaction-form-base";
+import { AccountPickerSheet, CategoryPickerSheet } from "@/components/screens/picker-sheets";
 
 type ActiveDialog = "delete" | "undo" | null;
 
@@ -31,7 +26,8 @@ export function DebitTransactionScreen() {
     typeof params.transactionSlug === "string" ? params.transactionSlug : "";
 
   const { accounts, isLoading: accountsLoading } = useDebitAccounts();
-  const { transactions, isLoading: txLoading, remove } = useTransactions();
+  const { categories } = useCategories();
+  const { transactions, isLoading: txLoading, remove, update } = useTransactions();
 
   const account = useMemo(
     () => (accounts ?? []).find((a) => a.id === accountId) ?? null,
@@ -43,25 +39,63 @@ export function DebitTransactionScreen() {
   );
 
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-  // Campos del formulario inicializados desde el transaction
+  // Campos editables — valores ISO / raw
+  const [amount, setAmount] = useState("0");
   const [description, setDescription] = useState("");
-  const [transactionDate, setTransactionDate] = useState("");
+  const [date, setDate] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
-  const [category, setCategory] = useState("");
-  const [note, setNote] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [notes, setNotes] = useState("");
 
+  // Inicializar una sola vez cuando la transacción carga
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (!transaction) return;
-    const id = window.requestAnimationFrame(() => {
-      setDescription(transaction.description);
-      setTransactionDate(transaction.date);
-      setPaymentDate(transaction.paymentDate);
-      setCategory(transaction.category);
-      setNote(transaction.note ?? "");
-    });
-    return () => window.cancelAnimationFrame(id);
+    if (!transaction || initializedRef.current) return;
+    initializedRef.current = true;
+    setAmount(String(transaction.amount));
+    setDescription(transaction.description);
+    setDate(transaction.date);
+    setPaymentDate(transaction.paymentDate);
+    setSelectedAccountId(transaction.accountId);
+    // categoría: buscar por nombre para obtener id
+    setNotes(transaction.note ?? "");
   }, [transaction]);
+
+  // Resolver categoryId desde el nombre en transaction (categorías cargan async)
+  const categoryResolved = useRef(false);
+  useEffect(() => {
+    if (!transaction || !categories || categoryResolved.current) return;
+    const match = categories.find((c) => c.name === transaction.category);
+    if (match) {
+      setCategoryId(match.id);
+      categoryResolved.current = true;
+    }
+  }, [transaction, categories]);
+
+  const selectedAccountName =
+    (accounts ?? []).find((a) => a.id === selectedAccountId)?.name ?? "";
+  const selectedCategoryName =
+    (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
+
+  const isDirty = useMemo(() => {
+    if (!transaction) return false;
+    const numAmount = parseNumericInput(amount);
+    const origCategory = (categories ?? []).find((c) => c.id === categoryId)?.name ?? categoryId;
+    return (
+      numAmount !== transaction.amount ||
+      description !== transaction.description ||
+      date !== transaction.date ||
+      paymentDate !== transaction.paymentDate ||
+      selectedAccountId !== transaction.accountId ||
+      origCategory !== transaction.category ||
+      (notes.trim() || undefined) !== (transaction.note ?? undefined)
+    );
+  }, [transaction, amount, description, date, paymentDate, selectedAccountId, categoryId, notes, categories]);
 
   const handleDelete = async () => {
     if (!transaction) return;
@@ -69,6 +103,25 @@ export function DebitTransactionScreen() {
     router.push(
       `/cuentas/debito/${accountId}?updated=1&deleted=${encodeURIComponent(transaction.description)}`,
     );
+  };
+
+  const handleSave = async () => {
+    if (!transaction || !isDirty || isSaving) return;
+    setIsSaving(true);
+    try {
+      await update(transaction.id, {
+        amount: parseNumericInput(amount) || transaction.amount,
+        description: description.trim() || transaction.description,
+        date,
+        paymentDate,
+        accountId: selectedAccountId || transaction.accountId,
+        category: selectedCategoryName || transaction.category,
+        note: notes.trim() || undefined,
+      });
+      router.back();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (accountsLoading || txLoading) {
@@ -98,7 +151,6 @@ export function DebitTransactionScreen() {
             </h1>
             <div aria-hidden="true" />
           </header>
-
           <div className="type-body flex flex-1 items-center justify-center px-4 text-center text-[var(--text-secondary)]">
             No encontramos esta transacción.
           </div>
@@ -107,106 +159,127 @@ export function DebitTransactionScreen() {
     );
   }
 
+  const displayAmount = formatMoneyInput(amount, DEFAULT_CURRENCY_CODE);
+
   return (
-    <div className="min-h-dvh bg-[var(--app-bg)] text-[var(--text-primary)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[36rem] flex-col px-4 pb-28 md:max-w-[860px] md:px-6 lg:max-w-[1160px] lg:px-8 xl:max-w-[1280px]">
-        <header className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center bg-[var(--app-bg)] pt-3 pb-2">
+    <div className="flex h-dvh flex-col bg-[var(--app-bg)] text-[var(--text-primary)]">
+      <div className="mx-auto flex h-full w-full max-w-[36rem] flex-col px-4 sm:max-w-[40rem] sm:px-5 md:max-w-[700px] md:px-6 lg:max-w-[820px] lg:px-8">
+
+        {/* Header */}
+        <header className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center pt-3 pb-1">
           <button
             type="button"
             aria-label="Volver"
             onClick={() => router.back()}
-            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
+            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)] transition hover:bg-white/5"
           >
             <ArrowLeft size={22} />
           </button>
-
-          <h1 className="type-subsection-title text-center font-semibold text-[var(--text-primary)]">
+          <h1 className="type-subsection-title text-center font-medium text-[var(--text-primary)]">
             Editar Gasto
           </h1>
-
           <button
             type="button"
             aria-label="Eliminar gasto"
             onClick={() => setActiveDialog("delete")}
-            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
+            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)] transition hover:bg-white/5"
           >
             <Trash2 size={22} strokeWidth={2.2} />
           </button>
         </header>
 
-        <section className="px-1 pt-8 text-center md:pt-10">
-          <p className="type-body text-[var(--text-primary)]">Monto</p>
-          <div className="type-display mt-1 flex items-center justify-center gap-1 font-medium text-[var(--text-primary)]">
-            <span>{formatAmountCLP(transaction.amount)}</span>
-          </div>
+        {/* Scroll body */}
+        <div className="scroll-safe-edge min-h-0 flex-1 overflow-y-auto">
 
-          <div className="type-label mt-4 inline-flex items-center gap-1.5 font-semibold tracking-[0.06em] text-[var(--text-primary)]">
-            <Check size={15} strokeWidth={2.4} />
-            <span>{transaction.statusLabel}</span>
-          </div>
-        </section>
+          {/* Monto editable */}
+          <section className="px-1 pt-7 text-center">
+            <p className="text-[0.76rem] font-medium tracking-wide text-[var(--text-secondary)]">
+              Monto
+            </p>
+            <div className="mt-1.5 flex items-baseline justify-center gap-[1px] type-display font-medium text-[var(--text-primary)]">
+              <span aria-hidden="true">$</span>
+              <label htmlFor="edit-amount" className="sr-only">Monto</label>
+              <input
+                id="edit-amount"
+                name="amount"
+                type="text"
+                inputMode="numeric"
+                value={displayAmount}
+                onChange={(e) =>
+                  setAmount(sanitizeNumericInput(stripMoneyFormat(e.target.value, DEFAULT_CURRENCY_CODE), "integer"))
+                }
+                onBlur={() => setAmount(normalizeNumericBlurValue(amount, "integer"))}
+                style={{ width: getNumericInputWidth(displayAmount) }}
+                className="min-w-[3ch] max-w-full border-0 bg-transparent p-0 text-center font-medium text-[var(--text-primary)] outline-none"
+              />
+            </div>
+            <div className="mt-3 flex justify-center">
+              <StatusBadge label={transaction.statusLabel} />
+            </div>
+          </section>
 
-        <section className="mt-12 grid gap-x-8 gap-y-0 md:grid-cols-2 lg:mx-auto lg:w-full lg:max-w-[60rem] xl:max-w-[64rem]">
-          <FieldRow
-            label="Descripción"
-            icon={<SquarePen size={16} className="shrink-0 text-white/92" />}
-            value={description}
-            onChange={setDescription}
-            className="md:col-span-2"
-          />
-          <FieldRow
-            label="Fecha de Transacción"
-            icon={<CalendarDays size={16} className="shrink-0 text-white/92" />}
-            value={transactionDate}
-            onChange={setTransactionDate}
-            withTopPadding
-          />
-          <FieldRow
-            label="Fecha de pago"
-            icon={<CalendarDays size={16} className="shrink-0 text-white/92" />}
-            value={paymentDate}
-            onChange={setPaymentDate}
-            withTopPadding
-          />
-          <FieldRow
-            label="Cuenta"
-            icon={<CreditCard size={16} className="shrink-0 text-white/92" />}
-            value={account.name}
-            onChange={() => {
-              /* cambio de cuenta: TODO */
-            }}
-            withTopPadding
-          />
-          <FieldRow
-            label="Categoría"
-            icon={<ShoppingCart size={16} className="shrink-0 text-white/92" />}
-            value={category}
-            onChange={setCategory}
-            withTopPadding
-          />
-          <TextAreaRow
-            label="Notas"
-            icon={<MessageSquare size={16} className="shrink-0 text-white/92" />}
-            value={note}
-            onChange={setNote}
-            withTopPadding
-            className="md:col-span-2"
-          />
-        </section>
-      </div>
+          {/* Campos */}
+          <section className="mt-8">
+            <FormTextField
+              id="edit-description"
+              label="Descripción"
+              value={description}
+              onChange={setDescription}
+            />
+            <FormDateField
+              id="edit-date"
+              label="Fecha de Transacción"
+              value={date}
+              onChange={setDate}
+            />
+            <FormDateField
+              id="edit-payment-date"
+              label="Fecha de Pago"
+              value={paymentDate}
+              onChange={setPaymentDate}
+            />
+            <FormPickerField
+              label="Cuenta"
+              icon={<Wallet size={16} />}
+              value={selectedAccountName}
+              placeholder="Selecciona cuenta"
+              onClick={() => setShowAccountPicker(true)}
+            />
+            <FormPickerField
+              label="Categoría"
+              icon={<Layers size={16} />}
+              value={selectedCategoryName}
+              placeholder="Selecciona categoría"
+              onClick={() => setShowCategoryPicker(true)}
+            />
+            <FormNotesField value={notes} onChange={setNotes} />
+          </section>
+        </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/8 bg-[#111a23] px-6 pb-5 pt-5 shadow-[0_-10px_28px_rgba(0,0,0,0.28)] md:bottom-4 md:left-1/2 md:right-auto md:w-[min(52rem,calc(100vw-3rem))] md:-translate-x-1/2 md:rounded-[1.2rem] md:border md:px-5 lg:w-[min(56rem,calc(100vw-4rem))]">
-        <div className="mx-auto flex w-full gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveDialog("undo")}
-            className="flex h-12 w-full items-center justify-center rounded-[0.9rem] bg-[#16485c] px-6 text-[1rem] font-medium text-[var(--accent)]"
-          >
-            Deshacer Pago
-          </button>
+        {/* Footer pinned */}
+        <div className="shrink-0 border-t border-white/[0.06] pb-6 pt-4">
+          {isDirty ? (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="type-body h-14 w-full rounded-2xl bg-[var(--accent)] font-semibold text-white shadow-[0_14px_28px_rgba(41,187,243,0.18)] transition hover:brightness-105 disabled:opacity-60"
+            >
+              {isSaving ? "Guardando…" : "Guardar"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setActiveDialog("undo")}
+              className="type-body h-14 w-full rounded-2xl bg-[#16485c] font-semibold text-[var(--accent)] transition hover:brightness-105"
+            >
+              Deshacer Pago
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Dialogs */}
       <ConfirmDialog
         isOpen={activeDialog === "delete"}
         title="¿Eliminar gasto?"
@@ -224,80 +297,60 @@ export function DebitTransactionScreen() {
         confirmLabel="SI"
         confirmClassName="text-[#ff5a3d]"
         onCancel={() => setActiveDialog(null)}
-        onConfirm={() =>
-          router.push(`/cuentas/debito/${accountId}?updated=1`)
-        }
+        onConfirm={() => router.push(`/cuentas/debito/${accountId}?updated=1`)}
       />
+
+      {showAccountPicker && (
+        <AccountPickerSheet
+          selected={selectedAccountId}
+          onSelect={(id) => setSelectedAccountId(id)}
+          onClose={() => setShowAccountPicker(false)}
+          pickerKey="account"
+        />
+      )}
+
+      {showCategoryPicker && (
+        <CategoryPickerSheet
+          type="expense"
+          selected={categoryId}
+          onSelect={setCategoryId}
+          onClose={() => setShowCategoryPicker(false)}
+        />
+      )}
     </div>
   );
 }
 
-function FieldRow({
-  label,
-  icon,
-  value,
-  onChange,
-  withTopPadding = false,
-  className,
-}: Readonly<{
-  label: string;
-  icon: ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  withTopPadding?: boolean;
-  className?: string;
-}>) {
-  return (
-    <div
-      className={`${className ?? ""} border-b border-[var(--line-strong)] pb-3 ${withTopPadding ? "pt-3" : ""}`}
-    >
-      <p className="type-label mb-2 text-[var(--text-primary)]">{label}</p>
+// ─── Status badge ─────────────────────────────────────────────────────────────
 
-      <div className="flex items-center gap-3 text-[var(--text-primary)]">
-        {icon}
-        <input
-          type="text"
-          aria-label={label}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="type-body min-h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
-        />
-      </div>
-    </div>
-  );
+type StatusConfig = { icon: ReactNode; color: string };
+
+function resolveStatus(label: string): StatusConfig {
+  const normalized = label.toLowerCase();
+  if (normalized === "retrasado") {
+    return {
+      icon: <AlertTriangle size={13} strokeWidth={2.4} />,
+      color: "text-[#f55a3d]",
+    };
+  }
+  if (normalized === "programado") {
+    return {
+      icon: <Clock size={13} strokeWidth={2.4} />,
+      color: "text-white/80",
+    };
+  }
+  return {
+    icon: <Check size={13} strokeWidth={2.4} />,
+    color: "text-white/80",
+  };
 }
 
-function TextAreaRow({
-  label,
-  icon,
-  value,
-  onChange,
-  withTopPadding = false,
-  className,
-}: Readonly<{
-  label: string;
-  icon: ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  withTopPadding?: boolean;
-  className?: string;
-}>) {
+function StatusBadge({ label }: { label: string }) {
+  const { icon, color } = resolveStatus(label);
   return (
-    <div
-      className={`${className ?? ""} border-b border-[var(--line-strong)] pb-3 ${withTopPadding ? "pt-3" : ""}`}
-    >
-      <p className="type-label mb-2 text-[var(--text-primary)]">{label}</p>
-
-      <div className="flex items-start gap-3 text-[var(--text-primary)]">
-        <div className="pt-2">{icon}</div>
-        <textarea
-          aria-label={label}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          rows={3}
-          className="type-body min-h-[4.5rem] min-w-0 flex-1 resize-none border-0 bg-transparent p-0 pt-1 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
-        />
-      </div>
-    </div>
+    <span className={`inline-flex items-center gap-1 text-[0.72rem] font-semibold tracking-[0.08em] ${color}`}>
+      {icon}
+      <span>{label.toUpperCase()}</span>
+    </span>
   );
 }

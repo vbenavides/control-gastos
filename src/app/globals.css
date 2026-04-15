@@ -306,6 +306,40 @@ button {
   animation: cal-grid-enter-prev 240ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
+/* ── Filter modal (desktop) ──────────────────────────────────────────────── */
+
+@keyframes filter-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes filter-modal-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
+/* Cancela la animación mobile en desktop para que filter-modal tome el control */
+@media (min-width: 768px) {
+  .fab-sheet-enter-none {
+    animation: none !important;
+  }
+  .fab-sheet-exit-none {
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

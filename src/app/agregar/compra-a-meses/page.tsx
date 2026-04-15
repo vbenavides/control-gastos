@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { AddInstallmentsScreen } from "@/components/screens/add-installments-screen";
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AddInstallmentsPage() {
-  return <AddInstallmentsScreen />;
+  return (
+    <Suspense>
+      <AddInstallmentsScreen />
+    </Suspense>
+  );
 }

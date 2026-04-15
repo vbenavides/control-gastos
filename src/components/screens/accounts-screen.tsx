@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Banknote, CircleCheck, CreditCard } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { formatAmountCLP } from "@/lib/currency";
 import { dispatchBottomNoticeVisibility } from "@/lib/bottom-notice-events";
@@ -98,7 +99,11 @@ export function AccountsScreen() {
     for (const account of accounts ?? []) {
       router.prefetch(`/cuentas/debito/${account.id}`);
     }
-  }, [accounts, router]);
+
+    for (const card of cards ?? []) {
+      router.prefetch(`/cuentas/tarjeta/${card.id}`);
+    }
+  }, [accounts, cards, router]);
 
   const isCreditTab = activeTab === CREDIT_TAB;
 
@@ -270,9 +275,11 @@ function CreditCardsPanel({
   return (
     <div className="mt-10 space-y-5">
       {cards.map((card) => (
-        <section
+        <Link
           key={card.id}
-          className="overflow-hidden rounded-[0.95rem] border border-white/[0.07] bg-[#17212b] px-4 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.12)]"
+          href={`/cuentas/tarjeta/${card.id}`}
+          prefetch={true}
+          className="block overflow-hidden rounded-[0.95rem] border border-white/[0.07] bg-[#17212b] px-4 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.12)] transition hover:border-white/[0.12] hover:bg-[#1b2732]"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -306,7 +313,7 @@ function CreditCardsPanel({
               <p>No tienes pagos pendientes para este periodo</p>
             </div>
           </div>
-        </section>
+        </Link>
       ))}
     </div>
   );

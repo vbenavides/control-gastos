@@ -748,6 +748,176 @@ export function NumberPickerSheet({
   );
 }
 
+// ─── TimePickerSheet (24h) ────────────────────────────────────────────────────
+
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES_60 = Array.from({ length: 60 }, (_, i) => i);
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function parseTimeStr(value: string): [number, number] {
+  const [h, m] = value.split(":").map(Number);
+  return [Number.isFinite(h) ? h : 9, Number.isFinite(m) ? m : 0];
+}
+
+export function TimePickerSheet({
+  value,
+  onClose,
+  onSelect,
+}: {
+  value: string;
+  onClose: () => void;
+  onSelect: (time: string) => void;
+}) {
+  const [initH, initM] = parseTimeStr(value);
+  const [isVisible, setIsVisible] = useState(false);
+  const [localHour, setLocalHour] = useState(initH);
+  const [localMinute, setLocalMinute] = useState(initM);
+
+  const hourRef = useRef<HTMLButtonElement>(null);
+  const minuteRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => setIsVisible(true));
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    hourRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
+    minuteRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
+  }, [isVisible]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleClose() {
+    setIsVisible(false);
+    setTimeout(onClose, 260);
+  }
+
+  function handleApply() {
+    onSelect(`${pad2(localHour)}:${pad2(localMinute)}`);
+    handleClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-label="Cerrar"
+        className={[
+          "absolute inset-0 transition-[background-color] duration-200",
+          isVisible ? "bg-black/55" : "bg-black/0",
+        ].join(" ")}
+        onClick={handleClose}
+      />
+
+      {/* Sheet */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Seleccionar hora"
+        className={[
+          "relative z-10 flex flex-col rounded-t-[1.5rem]",
+          "border border-[var(--line)] bg-[var(--surface)]",
+          "shadow-[0_-20px_50px_rgba(0,0,0,0.45)]",
+          "transition-transform duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform",
+          "sm:mx-auto sm:w-full sm:max-w-[640px] lg:max-w-[720px]",
+        ].join(" ")}
+        style={{ transform: isVisible ? "translateY(0)" : "translateY(100%)" }}
+      >
+        {/* Header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-6 py-4">
+          <h3 className="text-[1rem] font-semibold text-[var(--text-primary)]">
+            Seleccionar hora
+          </h3>
+          <div aria-live="polite" className="text-[1rem] font-semibold text-[var(--accent)]">
+            {pad2(localHour)}:{pad2(localMinute)}
+          </div>
+        </div>
+
+        {/* Columnas scrolleables */}
+        <div className="flex max-h-[52svh] min-h-0 overflow-hidden">
+          {/* Horas */}
+          <div className="flex flex-1 flex-col overflow-y-auto border-r border-[var(--line)]" style={{ WebkitOverflowScrolling: "touch" }}>
+            <p className="sticky top-0 z-10 bg-[var(--surface)] px-4 py-2 text-center text-[0.72rem] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+              Horas
+            </p>
+            {HOURS_24.map((h) => {
+              const isSelected = localHour === h;
+              return (
+                <button
+                  key={h}
+                  ref={isSelected ? hourRef : undefined}
+                  type="button"
+                  onClick={() => setLocalHour(h)}
+                  className={[
+                    "w-full border-b border-[var(--line)] py-[0.85rem] text-center text-[1.05rem] transition",
+                    isSelected
+                      ? "font-semibold text-[var(--accent)]"
+                      : "text-[var(--text-primary)] hover:bg-white/[0.03]",
+                  ].join(" ")}
+                >
+                  {pad2(h)}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Minutos */}
+          <div className="flex flex-1 flex-col overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+            <p className="sticky top-0 z-10 bg-[var(--surface)] px-4 py-2 text-center text-[0.72rem] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+              Minutos
+            </p>
+            {MINUTES_60.map((m) => {
+              const isSelected = localMinute === m;
+              return (
+                <button
+                  key={m}
+                  ref={isSelected ? minuteRef : undefined}
+                  type="button"
+                  onClick={() => setLocalMinute(m)}
+                  className={[
+                    "w-full border-b border-[var(--line)] py-[0.85rem] text-center text-[1.05rem] transition",
+                    isSelected
+                      ? "font-semibold text-[var(--accent)]"
+                      : "text-[var(--text-primary)] hover:bg-white/[0.03]",
+                  ].join(" ")}
+                >
+                  {pad2(m)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-[var(--line)] px-5 pb-7 pt-4">
+          <button
+            type="button"
+            onClick={handleApply}
+            className="type-body w-full rounded-[0.9rem] bg-[var(--accent)] py-[0.85rem] font-semibold text-white shadow-[0_8px_24px_rgba(41,187,243,0.18)] transition hover:brightness-105"
+          >
+            Listo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Re-exports of commonly used icons ───────────────────────────────────────
 
 export { SquarePen, Wallet, CreditCard, Layers, Bell, Clock, CalendarCheck2, RotateCcw, MessageSquare };

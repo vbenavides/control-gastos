@@ -91,9 +91,7 @@ export const quickActionItems: QuickActionItem[] = [
   },
 ];
 
-export const accountQuickActionItems = quickActionItems.filter(
-  (item) => item.kind !== "installments" && item.kind !== "cardPayment",
-);
+export const accountQuickActionItems = quickActionItems;
 
 // ─── Secciones del menú hamburguesa ─────────────────────────────────────────
 
