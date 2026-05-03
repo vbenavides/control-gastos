@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Layers, RotateCcw, SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
@@ -46,15 +46,17 @@ type IncomeDraft = {
 
 export function AddIncomeScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { categories } = useCategories();
   const { create: createTransaction } = useTransactions();
   const { readDraft, saveDraft, clearDraft } = useFormDraft<IncomeDraft>("add-income");
 
   const draft = readDraft();
+  const prefilledAccountId = searchParams.get("account") ?? "";
   const [amount, setAmount] = useState(draft?.amount ?? "0");
   const [description, setDescription] = useState(draft?.description ?? "");
-  const [depositAccountId, setDepositAccountId] = useState(draft?.depositAccountId ?? "");
+  const [depositAccountId, setDepositAccountId] = useState(draft?.depositAccountId || prefilledAccountId);
   const [paymentDate, setPaymentDate] = useState(draft?.paymentDate ?? todayISO);
   const [isRecurring, setIsRecurring] = useState(draft?.isRecurring ?? false);
   const [autoPayment, setAutoPayment] = useState(draft?.autoPayment ?? false);

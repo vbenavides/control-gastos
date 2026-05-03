@@ -58,7 +58,13 @@ function renderQuickActionIcon(kind: (typeof accountQuickActionItems)[number]["k
   }
 }
 
-export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomNotice?: boolean }) {
+export function AccountQuickActionsFab({
+  hasBottomNotice = false,
+  accountId,
+}: {
+  hasBottomNotice?: boolean;
+  accountId?: string;
+}) {
   const closeTimeoutRef = useRef<number | null>(null);
   const gestureStartYRef = useRef<number | null>(null);
   const gestureDeltaYRef = useRef(0);
@@ -310,7 +316,10 @@ export function AccountQuickActionsFab({ hasBottomNotice = false }: { hasBottomN
 
             <ul className="scroll-safe-edge flex-1 overflow-y-auto pb-6">
               {quickActions.map((item) => {
-                const href = QUICK_ACTION_ROUTES[item.kind];
+                const baseHref = QUICK_ACTION_ROUTES[item.kind];
+                const href = baseHref && accountId
+                  ? `${baseHref}?account=${accountId}`
+                  : baseHref;
                 const content = (
                   <>
                     <div className="grid h-11 w-11 shrink-0 place-items-center self-center rounded-[0.95rem] bg-white/[0.055] text-white/92 md:h-12 md:w-12">

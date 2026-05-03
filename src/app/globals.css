@@ -340,6 +340,68 @@ button {
   }
 }
 
+/* ── Bottom sheet (resumen + filtros) — slide up from bottom ─────────────── */
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-enter {
+  animation: sheet-up 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.backdrop-enter {
+  animation: backdrop-fade-in 220ms ease both;
+}
+
+/* ── Calendar summary slide-up (legacy, kept for compat) ─────────────────── */
+
+@keyframes cal-summary-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cal-summary-enter {
+  animation: cal-summary-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Calendar inline expand (balance breakdown / tx section) ─────────────── */
+
+@keyframes cal-expand-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cal-expand-enter {
+  animation: cal-expand-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

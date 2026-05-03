@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
@@ -34,14 +34,16 @@ type CashbackDraft = {
 
 export function AddCashbackScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { create: createTransaction } = useTransactions();
   const { readDraft, saveDraft, clearDraft } = useFormDraft<CashbackDraft>("add-cashback");
 
   const draft = readDraft();
+  const prefilledAccountId = searchParams.get("account") ?? "";
   const [amount, setAmount] = useState(draft?.amount ?? "0");
   const [description, setDescription] = useState(draft?.description ?? "Cashback");
-  const [depositAccountId, setDepositAccountId] = useState(draft?.depositAccountId ?? "");
+  const [depositAccountId, setDepositAccountId] = useState(draft?.depositAccountId || prefilledAccountId);
   const [date, setDate] = useState(draft?.date ?? todayISO);
   const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);

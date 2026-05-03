@@ -13,6 +13,7 @@ import {
 import type { Transaction, TransactionIconKind } from "@/lib/models";
 import { formatAmountCLP } from "@/lib/currency";
 import { formatShortDateEs } from "@/lib/date";
+import { isIncomeTransaction } from "@/lib/transactions";
 
 function renderTransactionIcon(kind: TransactionIconKind) {
   switch (kind) {
@@ -35,14 +36,18 @@ export function TransactionCard({
   transaction,
   accountSlug,
   accountName,
+  runningBalance,
 }: Readonly<{
   transaction: Transaction;
   /** ID de la cuenta (parámetro de ruta). */
   accountSlug: string;
   /** Nombre legible de la cuenta para mostrar en la card. */
   accountName?: string;
+  /** Saldo de la cuenta DESPUÉS de esta transacción. Si se omite, no se muestra. */
+  runningBalance?: number;
 }>) {
   const isPending = transaction.isPending === true;
+  const isIncome = !isPending && isIncomeTransaction(transaction);
 
   // Para pagos pendientes: detectar si está retrasado
   const isOverdue = isPending && transaction.date < new Date().toISOString().split("T")[0];
@@ -105,9 +110,22 @@ export function TransactionCard({
         </div>
 
         <div className="shrink-0 self-center text-right">
-          <p className={`type-body ${isPending ? "text-[#f55a3d]/80" : "text-[var(--text-primary)]"}`}>
+          <p
+            className={`type-body ${
+              isPending
+                ? "text-[#f55a3d]/80"
+                : isIncome
+                  ? "text-[#7dd3fc]"
+                  : "text-[var(--text-primary)]"
+            }`}
+          >
             {formatAmountCLP(transaction.amount)}
           </p>
+          {!isPending && runningBalance !== undefined && (
+            <p className="mt-0.5 text-[0.72rem] text-white">
+              {formatAmountCLP(runningBalance)}
+            </p>
+          )}
         </div>
       </Link>
     </div>

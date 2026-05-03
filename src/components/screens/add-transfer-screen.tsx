@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RotateCcw, SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
@@ -42,14 +42,16 @@ type TransferDraft = {
 
 export function AddTransferScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { create: createTransaction, update: updateTransaction } = useTransactions();
   const { readDraft, saveDraft, clearDraft } = useFormDraft<TransferDraft>("add-transfer");
 
   const draft = readDraft();
+  const prefilledAccountId = searchParams.get("account") ?? "";
   const [amount, setAmount] = useState(draft?.amount ?? "0");
   const [description, setDescription] = useState(draft?.description ?? "");
-  const [fromAccountId, setFromAccountId] = useState(draft?.fromAccountId ?? "");
+  const [fromAccountId, setFromAccountId] = useState(draft?.fromAccountId || prefilledAccountId);
   const [toAccountId, setToAccountId] = useState(draft?.toAccountId ?? "");
   const [date, setDate] = useState(draft?.date ?? todayISO);
   const [isRecurring, setIsRecurring] = useState(draft?.isRecurring ?? false);

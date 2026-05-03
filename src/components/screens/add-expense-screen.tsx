@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Layers, SquarePen, Wallet } from "lucide-react";
 
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
@@ -39,16 +39,18 @@ type ExpenseDraft = {
 
 export function AddExpenseScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accounts, adjustBalance: adjustAccountBalance } = useDebitAccounts();
   const { categories } = useCategories();
   const { create: createTransaction } = useTransactions();
   const { readDraft, saveDraft, clearDraft } = useFormDraft<ExpenseDraft>("add-expense");
 
   const draft = readDraft();
+  const prefilledAccountId = searchParams.get("account") ?? "";
   const [amount, setAmount] = useState(draft?.amount ?? "0");
   const [description, setDescription] = useState(draft?.description ?? "");
   const [date, setDate] = useState(draft?.date ?? todayISO);
-  const [accountId, setAccountId] = useState(draft?.accountId ?? "");
+  const [accountId, setAccountId] = useState(draft?.accountId || prefilledAccountId);
   const [categoryId, setCategoryId] = useState(draft?.categoryId ?? "");
   const [notes, setNotes] = useState(draft?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);

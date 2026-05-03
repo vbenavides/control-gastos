@@ -20,6 +20,7 @@ import { AccountQuickActionsFab } from "@/components/account-quick-actions-fab";
 import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
 import { formatShortDateEs, sortTransactionsDesc } from "@/lib/date";
 import type { Transaction, TransactionIconKind } from "@/lib/models";
+import { computeRunningBalances, isIncomeTransaction } from "@/lib/transactions";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import {
   formatMoneyInput,
@@ -73,6 +74,11 @@ export function DebitAccountScreen() {
         (transactions ?? []).filter((t) => t.accountId === accountId)
       ).slice(0, 10),
     [transactions, accountId],
+  );
+
+  const runningBalanceMap = useMemo(
+    () => computeRunningBalances(recentTransactions, account?.balance ?? 0),
+    [recentTransactions, account?.balance],
   );
 
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
@@ -275,6 +281,8 @@ export function DebitAccountScreen() {
                 <div className="mt-4 space-y-3 md:space-y-3.5">
                   {recentTransactions.map((transaction: Transaction) => {
                     const isPending = transaction.isPending === true;
+                    const isIncome = !isPending && isIncomeTransaction(transaction);
+                    const runningBalance = runningBalanceMap.get(transaction.id);
                     return (
                       <Link
                         key={transaction.id}
@@ -308,9 +316,22 @@ export function DebitAccountScreen() {
                           </div>
 
                           <div className="shrink-0 self-center text-right">
-                            <p className={`type-body ${isPending ? "text-[#ffffffb5]" : "text-[var(--text-primary)]"}`}>
+                            <p
+                              className={`type-body ${
+                                isPending
+                                  ? "text-[#ffffffb5]"
+                                  : isIncome
+                                    ? "text-[#7dd3fc]"
+                                    : "text-[var(--text-primary)]"
+                              }`}
+                            >
                               {formatAmountCLP(transaction.amount)}
                             </p>
+                            {!isPending && runningBalance !== undefined && (
+                              <p className="mt-0.5 text-[0.72rem] text-white">
+                                {formatAmountCLP(runningBalance)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </Link>
@@ -333,7 +354,7 @@ export function DebitAccountScreen() {
         </div>
       </div>
 
-      <AccountQuickActionsFab hasBottomNotice={!!bottomNotice} />
+      <AccountQuickActionsFab hasBottomNotice={!!bottomNotice} accountId={account.id} />
 
       {showBalanceDialog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">

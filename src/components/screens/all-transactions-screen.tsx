@@ -14,6 +14,7 @@ import {
 } from "@/components/transaction-filters";
 import { formatAmountCLP } from "@/lib/currency";
 import { sortTransactionsDesc } from "@/lib/date";
+import { computeRunningBalances } from "@/lib/transactions";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
@@ -134,6 +135,16 @@ export function AllTransactionsScreen() {
         .reduce((acc, t) => acc + t.amount, 0),
     [filtered],
   );
+
+  // Running balances computed from ALL account transactions (unfiltered) so the
+  // balance stays accurate even when filters hide intermediate transactions.
+  const runningBalanceMap = useMemo(() => {
+    if (!account) return new Map<string, number>();
+    const allAccountTxs = sortTransactionsDesc(
+      (transactions ?? []).filter((t) => t.accountId === accountId),
+    );
+    return computeRunningBalances(allAccountTxs, account.balance);
+  }, [transactions, accountId, account]);
 
   // ── Chip labels ──
   const dateLabelApplied = `${formatDateLabel(applied.dateFrom)} - ${formatDateLabel(applied.dateTo)}`;
@@ -318,6 +329,7 @@ export function AllTransactionsScreen() {
                   transaction={transaction}
                   accountSlug={transaction.accountId}
                   accountName={accountMap.get(transaction.accountId)}
+                  runningBalance={runningBalanceMap.get(transaction.id)}
                 />
               ))}
             </div>
