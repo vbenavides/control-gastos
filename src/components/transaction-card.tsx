@@ -2,35 +2,14 @@ import Link from "next/link";
 import {
   Check,
   Clock,
-  HeartPulse,
-  Layers3,
-  PiggyBank,
-  ShoppingCart,
-  TrainFront,
-  UtensilsCrossed,
 } from "lucide-react";
 
-import type { Transaction, TransactionIconKind } from "@/lib/models";
+import type { Transaction } from "@/lib/models";
 import { formatAmountCLP } from "@/lib/currency";
 import { formatShortDateEs } from "@/lib/date";
+import { useCategories } from "@/lib/hooks/use-categories";
 import { isIncomeTransaction } from "@/lib/transactions";
-
-function renderTransactionIcon(kind: TransactionIconKind) {
-  switch (kind) {
-    case "piggy-bank":
-      return <PiggyBank size={15} strokeWidth={2.2} />;
-    case "shopping-cart":
-      return <ShoppingCart size={15} strokeWidth={2.2} />;
-    case "layers":
-      return <Layers3 size={15} strokeWidth={2.2} />;
-    case "train":
-      return <TrainFront size={15} strokeWidth={2.2} />;
-    case "heart":
-      return <HeartPulse size={15} strokeWidth={2.2} />;
-    case "utensils":
-      return <UtensilsCrossed size={15} strokeWidth={2.2} />;
-  }
-}
+import { getTransactionVisualMeta } from "@/lib/transaction-visuals";
 
 export function TransactionCard({
   transaction,
@@ -48,6 +27,9 @@ export function TransactionCard({
 }>) {
   const isPending = transaction.isPending === true;
   const isIncome = !isPending && isIncomeTransaction(transaction);
+  const { categories } = useCategories();
+  const visual = getTransactionVisualMeta(transaction, categories);
+  const Icon = visual.Icon;
 
   // Para pagos pendientes: detectar si está retrasado
   const isOverdue = isPending && transaction.date < new Date().toISOString().split("T")[0];
@@ -88,13 +70,13 @@ export function TransactionCard({
         <div
           className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
           style={{
-            backgroundColor: isPending ? "#2a1208" : transaction.iconBackground,
-            color: isPending ? "#f55a3d" : transaction.iconColor,
+            backgroundColor: isPending ? "#2a1208" : visual.backgroundColor,
+            color: isPending ? "#f55a3d" : visual.color,
           }}
         >
           {isPending
             ? <Clock size={15} strokeWidth={2.2} />
-            : renderTransactionIcon(transaction.iconKind)}
+            : <Icon size={15} strokeWidth={2.2} />}
         </div>
 
         <div className="min-w-0 flex-1 self-center">

@@ -1,4 +1,11 @@
-import type { BudgetSettings, Category, CreditCard, DebitAccount, Transaction } from "@/lib/models";
+import type {
+  BudgetSettings,
+  Category,
+  CreditCard,
+  DebitAccount,
+  InstallmentPayment,
+  Transaction,
+} from "@/lib/models";
 
 // ─── Cuenta de débito ───────────────────────────────────────────────────────
 
@@ -33,6 +40,18 @@ export interface ITransactionRepository {
   delete(id: string): Promise<void>;
   /** Elimina todas las transacciones de una cuenta (usar antes de borrar la cuenta). */
   deleteByAccountId(accountId: string): Promise<void>;
+}
+
+export interface IInstallmentPaymentRepository {
+  getAll(): Promise<InstallmentPayment[]>;
+  getByPurchaseTransactionId(purchaseTransactionId: string): Promise<InstallmentPayment[]>;
+  getById(id: string): Promise<InstallmentPayment | null>;
+  create(data: Omit<InstallmentPayment, "id" | "createdAt">): Promise<InstallmentPayment>;
+  update(
+    id: string,
+    data: Partial<Omit<InstallmentPayment, "id" | "createdAt">>,
+  ): Promise<InstallmentPayment>;
+  delete(id: string): Promise<void>;
 }
 
 // ─── Categorías ─────────────────────────────────────────────────────────────

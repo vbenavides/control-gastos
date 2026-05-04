@@ -209,27 +209,41 @@ export function CalendarModal({ value, label, onAccept, onCancel }: CalendarModa
 
   // ── Month navigation ──────────────────────────────────────────────────────
 
+  const syncPendingForView = useCallback((nextY: number, nextM: number) => {
+    const parsed = parseISO(pendingISO);
+    const currentDay = parsed?.d ?? 1;
+    const nextDay = Math.min(currentDay, getDaysInMonth(nextY, nextM));
+    const nextIso = toISO(nextY, nextM, nextDay);
+    setPendingISO(nextIso);
+    setTextInput(isoToTextInput(nextIso));
+    setTextError(false);
+  }, [pendingISO]);
+
   const changeMonth = useCallback((dir: "prev" | "next") => {
     setSlideAnimDir(dir);
     setMonthKey((k) => k + 1);
     if (dir === "prev") {
-      setViewM((m) => {
-        if (m === 1) {
-          setViewY((y) => y - 1);
-          return 12;
-        }
-        return m - 1;
-      });
+      let nextY = viewY;
+      let nextM = viewM - 1;
+      if (nextM < 1) {
+        nextM = 12;
+        nextY -= 1;
+      }
+      setViewY(nextY);
+      setViewM(nextM);
+      syncPendingForView(nextY, nextM);
     } else {
-      setViewM((m) => {
-        if (m === 12) {
-          setViewY((y) => y + 1);
-          return 1;
-        }
-        return m + 1;
-      });
+      let nextY = viewY;
+      let nextM = viewM + 1;
+      if (nextM > 12) {
+        nextM = 1;
+        nextY += 1;
+      }
+      setViewY(nextY);
+      setViewM(nextM);
+      syncPendingForView(nextY, nextM);
     }
-  }, []);
+  }, [syncPendingForView, viewM, viewY]);
 
   const prevMonth = useCallback(() => changeMonth("prev"), [changeMonth]);
   const nextMonth = useCallback(() => changeMonth("next"), [changeMonth]);
@@ -244,6 +258,7 @@ export function CalendarModal({ value, label, onAccept, onCancel }: CalendarModa
 
   const handleYearSelect = (y: number) => {
     setViewY(y);
+    syncPendingForView(y, viewM);
     setShowYearPicker(false);
   };
 

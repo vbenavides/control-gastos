@@ -66,6 +66,8 @@ export type TransactionIconKind =
 export type Transaction = {
   id: string;
   accountId: string; // FK → DebitAccount.id
+  /** FK opcional → CreditCard.id cuando la transacción pertenece a una tarjeta */
+  cardId?: string;
   amount: number; // raw number
   description: string;
   category: string; // nombre de categoría (futuro: FK → Category.id)
@@ -83,6 +85,20 @@ export type Transaction = {
   createdAt?: string;
   /** ID de la transacción contraparte en una transferencia */
   transferPairId?: string;
+};
+
+export type InstallmentPayment = {
+  id: string;
+  profileId: string;
+  purchaseTransactionId: string;
+  installmentNumber: number;
+  amount: number;
+  paidFromAccountId: string;
+  paymentDate: string;
+  debitTransactionId: string;
+  isPaid: boolean;
+  note?: string;
+  createdAt: string;
 };
 
 // ─── Categoría ──────────────────────────────────────────────────────────────

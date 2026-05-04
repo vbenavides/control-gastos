@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Banknote, CircleCheck, CreditCard } from "lucide-react";
+import { Banknote, CircleCheck, CreditCard, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -256,6 +256,49 @@ function DebitAccountsPanel({
   );
 }
 
+// ─── Payment status helpers ───────────────────────────────────────────────────
+
+type PaymentStatus =
+  | { kind: "no-pending" }
+  | { kind: "pending"; dueDate: Date };
+
+function getPaymentStatus(card: CreditCardModel, today: Date): PaymentStatus {
+  if (card.balance <= 0) return { kind: "no-pending" };
+
+  const day = today.getDate();
+  const month = today.getMonth();
+  const year = today.getFullYear();
+  const { statementDay, paymentDay } = card;
+
+  // Most recent statement close date
+  const statementDate =
+    day >= statementDay
+      ? new Date(year, month, statementDay)
+      : new Date(year, month - 1, statementDay);
+
+  // Payment is due on paymentDay of the month AFTER the statement month
+  const dueDate = new Date(
+    statementDate.getFullYear(),
+    statementDate.getMonth() + 1,
+    paymentDay,
+  );
+
+  // Pending window: today is after statement AND on/before due date
+  if (today >= statementDate && today <= dueDate) {
+    return { kind: "pending", dueDate };
+  }
+
+  return { kind: "no-pending" };
+}
+
+const SHORT_MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"] as const;
+
+function formatDueDate(date: Date): string {
+  return `${date.getDate()} ${SHORT_MONTHS[date.getMonth()]}`;
+}
+
+// ─── CreditCardsPanel ─────────────────────────────────────────────────────────
+
 function CreditCardsPanel({
   cards,
   isLoading,
@@ -272,49 +315,63 @@ function CreditCardsPanel({
     );
   }
 
+  const today = useMemo(() => new Date(), []);
+
   return (
     <div className="mt-10 space-y-5">
-      {cards.map((card) => (
-        <Link
-          key={card.id}
-          href={`/cuentas/tarjeta/${card.id}`}
-          prefetch={true}
-          className="block overflow-hidden rounded-[0.95rem] border border-white/[0.07] bg-[#17212b] px-4 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.12)] transition hover:border-white/[0.12] hover:bg-[#1b2732]"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CreditCard size={18} strokeWidth={2.1} className="text-white/92" />
-              <p className="type-body font-medium text-white">{card.name}</p>
+      {cards.map((card) => {
+        const available = Math.max(0, card.limit - card.balance);
+        const status = getPaymentStatus(card, today);
+
+        return (
+          <Link
+            key={card.id}
+            href={`/cuentas/tarjeta/${card.id}`}
+            prefetch={true}
+            className="block overflow-hidden rounded-[0.95rem] border border-white/[0.07] bg-[#17212b] px-4 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.12)] transition hover:border-white/[0.12] hover:bg-[#1b2732]"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CreditCard size={18} strokeWidth={2.1} className="text-white/92" />
+                <p className="type-body font-medium text-white">{card.name}</p>
+              </div>
+
+              <p className="type-label tracking-[0.03em] text-white/72">**** {card.last4}</p>
             </div>
 
-            <p className="type-label tracking-[0.03em] text-white/72">**** {card.last4}</p>
-          </div>
+            <div className="mt-5 grid grid-cols-2 gap-5">
+              <div>
+                <p className="type-label text-white/72">Balance</p>
+                <p className="type-display mt-0.5 font-medium text-[var(--text-primary)]">
+                  {formatAmountCLP(card.balance)}
+                </p>
+              </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-5">
-            <div>
-              <p className="type-label text-white/72">Balance</p>
-              <p className="type-display mt-0.5 font-medium text-[var(--text-primary)]">
-                {formatAmountCLP(card.balance)}
-              </p>
+              <div className="text-right">
+                <p className="type-label text-white/72">Disponible</p>
+                <div className="ml-auto mt-1 h-1 w-[6.5rem] rounded-full bg-[#2d4e3b]" />
+                <p className="type-body mt-1 font-medium text-[var(--text-primary)]">
+                  {formatAmountCLP(available)}
+                </p>
+              </div>
             </div>
 
-            <div className="text-right">
-              <p className="type-label text-white/72">Disponible</p>
-              <div className="ml-auto mt-1 h-1 w-[6.5rem] rounded-full bg-[#2d4e3b]" />
-              <p className="type-body mt-1 font-medium text-[var(--text-primary)]">
-                {formatAmountCLP(card.limit - card.balance)}
-              </p>
+            <div className="mt-5 border-t border-white/10 pt-3">
+              {status.kind === "pending" ? (
+                <div className="type-label flex items-center gap-2 text-[var(--text-secondary)]">
+                  <TriangleAlert size={15} strokeWidth={2.2} className="shrink-0 text-[#f5a623]" />
+                  <p>Tienes un pago pendiente que vence el {formatDueDate(status.dueDate)}</p>
+                </div>
+              ) : (
+                <div className="type-label flex items-center gap-2 text-[var(--text-secondary)]">
+                  <CircleCheck size={15} strokeWidth={2.2} className="shrink-0 text-[#8de56c]" />
+                  <p>No tienes pagos pendientes para este periodo</p>
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="mt-5 border-t border-white/10 pt-3">
-            <div className="type-label flex items-center gap-2 text-[var(--text-secondary)]">
-              <CircleCheck size={15} strokeWidth={2.2} className="shrink-0 text-[#8de56c]" />
-              <p>No tienes pagos pendientes para este periodo</p>
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        );
+      })}
     </div>
   );
 }

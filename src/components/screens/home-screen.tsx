@@ -12,7 +12,6 @@ import {
   Filter,
   HandCoins,
   List,
-  Layers3,
   ShoppingBag,
 } from "lucide-react";
 import { useMemo } from "react";
@@ -26,10 +25,12 @@ import {
   SurfaceCard,
 } from "@/components/ui-kit";
 import { formatAmountCLP } from "@/lib/currency";
+import { useCategories } from "@/lib/hooks/use-categories";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
 import type { Transaction } from "@/lib/models";
+import { getTransactionVisualMeta } from "@/lib/transaction-visuals";
 
 export function HomeScreen() {
   const cardIcons = [ShoppingBag, CreditCard, HandCoins, ArrowLeftRight];
@@ -284,6 +285,9 @@ function PendingPaymentRow({
 }) {
   const today = new Date().toISOString().split("T")[0] ?? "";
   const isOverdue = transaction.date < today;
+  const { categories } = useCategories();
+  const visual = getTransactionVisualMeta(transaction, categories);
+  const Icon = visual.Icon;
   const accountName =
     accounts.find((a) => a.id === transaction.accountId)?.name ?? "";
 
@@ -328,9 +332,9 @@ function PendingPaymentRow({
       <div className="flex items-center gap-3 px-3 py-3 md:px-4">
         <div
           className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
-          style={{ backgroundColor: transaction.iconBackground, color: transaction.iconColor }}
+          style={{ backgroundColor: visual.backgroundColor, color: visual.color }}
         >
-          <Layers3 size={15} strokeWidth={2.2} />
+          <Icon size={15} strokeWidth={2.2} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="type-body truncate text-[var(--text-primary)]">{transaction.description}</p>

@@ -6,20 +6,15 @@ import {
   ArrowLeft,
   Check,
   Clock,
-  HeartPulse,
-  Layers3,
   Pencil,
-  PiggyBank,
-  ShoppingCart,
-  TrainFront,
-  UtensilsCrossed,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccountQuickActionsFab } from "@/components/account-quick-actions-fab";
 import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
 import { formatShortDateEs, sortTransactionsDesc } from "@/lib/date";
-import type { Transaction, TransactionIconKind } from "@/lib/models";
+import type { Transaction } from "@/lib/models";
+import { useCategories } from "@/lib/hooks/use-categories";
 import { computeRunningBalances, isIncomeTransaction } from "@/lib/transactions";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import {
@@ -30,28 +25,12 @@ import {
   stripMoneyFormat,
 } from "@/lib/numeric-input";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { getTransactionVisualMeta } from "@/lib/transaction-visuals";
 
 type TopNotice = {
   title: string;
   description: string;
 };
-
-function renderTransactionIcon(kind: TransactionIconKind) {
-  switch (kind) {
-    case "piggy-bank":
-      return <PiggyBank size={15} strokeWidth={2.2} />;
-    case "shopping-cart":
-      return <ShoppingCart size={15} strokeWidth={2.2} />;
-    case "layers":
-      return <Layers3 size={15} strokeWidth={2.2} />;
-    case "train":
-      return <TrainFront size={15} strokeWidth={2.2} />;
-    case "heart":
-      return <HeartPulse size={15} strokeWidth={2.2} />;
-    case "utensils":
-      return <UtensilsCrossed size={15} strokeWidth={2.2} />;
-  }
-}
 
 export function DebitAccountScreen() {
   const params = useParams<{ accountSlug: string }>();
@@ -61,6 +40,7 @@ export function DebitAccountScreen() {
   const searchQuery = searchParams.toString();
 
   const { accounts, isLoading: accountsLoading, update: updateAccount } = useDebitAccounts();
+  const { categories } = useCategories();
   const { transactions, isLoading: txLoading } = useTransactions();
 
   const account = useMemo(
@@ -283,6 +263,8 @@ export function DebitAccountScreen() {
                     const isPending = transaction.isPending === true;
                     const isIncome = !isPending && isIncomeTransaction(transaction);
                     const runningBalance = runningBalanceMap.get(transaction.id);
+                    const visual = getTransactionVisualMeta(transaction, categories);
+                    const Icon = visual.Icon;
                     return (
                       <Link
                         key={transaction.id}
@@ -301,11 +283,11 @@ export function DebitAccountScreen() {
                           <div
                             className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem] md:h-10 md:w-10"
                             style={{
-                              backgroundColor: isPending ? "#1a2028" : transaction.iconBackground,
-                              color: isPending ? "#ffffffb5" : transaction.iconColor,
+                              backgroundColor: isPending ? "#1a2028" : visual.backgroundColor,
+                              color: isPending ? "#ffffffb5" : visual.color,
                             }}
                           >
-                            {renderTransactionIcon(transaction.iconKind)}
+                            <Icon size={15} strokeWidth={2.2} />
                           </div>
 
                           <div className="min-w-0 flex-1 self-center">

@@ -42,6 +42,7 @@ import { useMemo, useState } from "react";
 
 import { CircularProgress, ProgressBar, SurfaceCard } from "@/components/ui-kit";
 import { formatAmountCLP } from "@/lib/currency";
+import { getTransactionVisualMeta } from "@/lib/transaction-visuals";
 import { sortTransactionsDesc } from "@/lib/date";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
@@ -314,6 +315,8 @@ export function CategoryDetailScreen() {
             <div className="space-y-2.5">
               {catTransactions.map((tx) => {
                 const accountName = accountMap.get(tx.accountId);
+                const visual = getTransactionVisualMeta(tx, categories);
+                const Icon = visual.Icon;
                 return (
                   <Link
                     key={tx.id}
@@ -330,9 +333,9 @@ export function CategoryDetailScreen() {
                     <div className="flex min-h-[4rem] items-center gap-3 px-3 py-3 md:px-4">
                       <div
                         className="grid h-9 w-9 shrink-0 place-items-center rounded-[0.78rem]"
-                        style={{ backgroundColor: tx.iconBackground, color: tx.iconColor }}
+                        style={{ backgroundColor: visual.backgroundColor, color: visual.color }}
                       >
-                        <ShoppingCart size={15} strokeWidth={2.2} />
+                        <Icon size={15} strokeWidth={2.2} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="type-body truncate text-[var(--text-primary)]">{tx.description}</p>

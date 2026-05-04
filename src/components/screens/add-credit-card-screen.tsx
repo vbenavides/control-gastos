@@ -3,10 +3,8 @@
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Bell,
   CalendarDays,
   CircleHelp,
-  Clock3,
   CreditCard,
   Percent,
   SquarePen,
@@ -39,7 +37,6 @@ export function AddCreditCardScreen() {
   const [statementDay, setStatementDay] = useState(1);
   const [paymentDay, setPaymentDay] = useState(1);
   const [gracePeriodDays, setGracePeriodDays] = useState("10");
-  const [paymentReminderEnabled, setPaymentReminderEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showStatementDayPicker, setShowStatementDayPicker] = useState(false);
@@ -63,7 +60,7 @@ export function AddCreditCardScreen() {
         statementDay: statementDay,
         paymentDay: paymentDay,
         gracePeriodDays: parseInt(gracePeriodDays, 10) || 10,
-        paymentReminderEnabled,
+        paymentReminderEnabled: false,
         paymentScheduleMode: "manual",
       });
       const hasReturnPicker =
@@ -224,41 +221,7 @@ export function AddCreditCardScreen() {
               </p>
             </div>
 
-            <div className="border-b border-[var(--line-strong)] py-5">
-              <div className="flex items-center justify-between gap-4">
-                <p className="type-body text-[var(--text-primary)]">
-                  Recordatorio de fecha de vencimiento de pago
-                </p>
 
-                <button
-                  type="button"
-                  aria-pressed={paymentReminderEnabled}
-                  onClick={() => setPaymentReminderEnabled((current) => !current)}
-                  className={`relative h-8 w-[3.25rem] rounded-full p-1 transition-colors ${
-                    paymentReminderEnabled ? "bg-[var(--accent)]" : "bg-white/16"
-                  }`}
-                >
-                  <span
-                    className={`block h-6 w-6 rounded-full bg-white transition-transform ${
-                      paymentReminderEnabled ? "translate-x-[1.25rem]" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {paymentReminderEnabled && (
-                <div className="mt-4 space-y-4">
-                  <ReminderRow
-                    icon={<Bell size={17} className="text-white/92" />}
-                    value="Día anterior"
-                  />
-                  <ReminderRow
-                    icon={<Clock3 size={17} className="text-white/92" />}
-                    value="10:00"
-                  />
-                </div>
-              )}
-            </div>
           </section>
 
           <div className="mt-auto pt-8">
@@ -563,17 +526,4 @@ function InlineAmountInput({
 
 
 
-function ReminderRow({
-  icon,
-  value,
-}: Readonly<{
-  icon: ReactNode;
-  value: string;
-}>) {
-  return (
-    <div className="type-body flex items-center gap-3 text-[var(--text-primary)]">
-      {icon}
-      <span>{value}</span>
-    </div>
-  );
-}
+

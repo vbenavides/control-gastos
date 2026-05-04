@@ -11,11 +11,13 @@ import {
   Percent,
   SquarePen,
   TrendingUp,
+  Trash2,
   X,
 } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DEFAULT_CURRENCY_CODE } from "@/lib/currency";
 import {
   formatMoneyInput,
@@ -27,12 +29,15 @@ import {
 } from "@/lib/numeric-input";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
 
+type ActiveDialog = "delete" | null;
+
 export function EditCreditCardScreen() {
   const params = useParams<{ cardId: string }>();
   const router = useRouter();
   const cardId = typeof params.cardId === "string" ? params.cardId : "";
 
-  const { cards, update, isLoading: isDataLoading } = useCreditCards();
+  const { cards, update, remove, isLoading: isDataLoading } = useCreditCards();
+  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
 
   const card = useMemo(
     () => (cards ?? []).find((c) => c.id === cardId) ?? null,
@@ -71,6 +76,13 @@ export function EditCreditCardScreen() {
     setPaymentReminderEnabled(card.paymentReminderEnabled);
     setInitialized(true);
   }, [card, initialized]);
+
+  const handleDelete = async () => {
+    setActiveDialog(null);
+    if (!card) return;
+    await remove(card.id);
+    router.push(`/cuentas?tab=tarjetas&deleted=${encodeURIComponent(card.name)}`);
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -135,7 +147,14 @@ export function EditCreditCardScreen() {
             Editar tarjeta
           </h1>
 
-          <div aria-hidden="true" />
+          <button
+            type="button"
+            aria-label="Eliminar tarjeta"
+            onClick={() => setActiveDialog("delete")}
+            className="grid h-10 w-10 place-items-center rounded-lg text-[var(--text-primary)]"
+          >
+            <Trash2 size={22} strokeWidth={2.2} />
+          </button>
         </header>
 
         <form className="flex flex-1 flex-col" onSubmit={handleSubmit}>
@@ -319,6 +338,17 @@ export function EditCreditCardScreen() {
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+        isOpen={activeDialog === "delete"}
+        title="Eliminar tarjeta"
+        description="Esto eliminará permanentemente la tarjeta y todas sus transacciones asociadas. Esta acción no se puede deshacer."
+        cancelLabel="Cancelar"
+        confirmLabel="Eliminar"
+        confirmClassName="text-[#ff5a3d]"
+        onCancel={() => setActiveDialog(null)}
+        onConfirm={handleDelete}
+      />
 
       {/* ── Day picker sheets ── */}
       {showStatementDayPicker && (

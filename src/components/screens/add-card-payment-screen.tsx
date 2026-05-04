@@ -91,6 +91,7 @@ export function AddCardPaymentScreen() {
 
       await createTransaction({
         accountId: payFromAccountId,
+        cardId,
         amount: numericAmount,
         description: `Pago tarjeta ${card?.name ?? ""}`.trim(),
         category: "Pago de Tarjeta",

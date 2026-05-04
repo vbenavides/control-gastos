@@ -9,7 +9,14 @@ import {
   useState,
 } from "react";
 
-import type { BudgetSettings, Category, CreditCard, DebitAccount, Transaction } from "@/lib/models";
+import type {
+  BudgetSettings,
+  Category,
+  CreditCard,
+  DebitAccount,
+  InstallmentPayment,
+  Transaction,
+} from "@/lib/models";
 import { useProfile } from "@/lib/profile/profile-context";
 import { getRepositories } from "@/lib/repositories";
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +25,7 @@ type AppDataContextValue = {
   accounts: DebitAccount[] | null;
   cards: CreditCard[] | null;
   transactions: Transaction[] | null;
+  installmentPayments: InstallmentPayment[] | null;
   categories: Category[] | null;
   budgetSettings: BudgetSettings | null;
   isHydrated: boolean;
@@ -38,6 +46,15 @@ type AppDataContextValue = {
   createTransaction: (data: Omit<Transaction, "id">) => Promise<Transaction>;
   updateTransaction: (id: string, data: Partial<Omit<Transaction, "id">>) => Promise<Transaction>;
   removeTransaction: (id: string) => Promise<void>;
+  createInstallmentPayment: (
+    data: Omit<InstallmentPayment, "id" | "createdAt">,
+  ) => Promise<InstallmentPayment>;
+  updateInstallmentPayment: (
+    id: string,
+    data: Partial<Omit<InstallmentPayment, "id" | "createdAt">>,
+  ) => Promise<InstallmentPayment>;
+  removeInstallmentPayment: (id: string) => Promise<void>;
+  refreshInstallmentPayments: () => Promise<void>;
   createCategory: (data: Omit<Category, "id">) => Promise<Category>;
   updateCategory: (id: string, data: Partial<Omit<Category, "id">>) => Promise<Category>;
   removeCategory: (id: string) => Promise<void>;
@@ -53,6 +70,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
   const [accounts, setAccounts] = useState<DebitAccount[] | null>(null);
   const [cards, setCards] = useState<CreditCard[] | null>(null);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+  const [installmentPayments, setInstallmentPayments] = useState<InstallmentPayment[] | null>(null);
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [budgetSettings, setBudgetSettings] = useState<BudgetSettings | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -71,11 +89,19 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
 
       const repos = getRepositories(supabase, activeProfile.id);
 
-      const [nextAccounts, nextCards, nextTransactions, rawCategories, nextBudget] =
+      const [
+        nextAccounts,
+        nextCards,
+        nextTransactions,
+        nextInstallmentPayments,
+        rawCategories,
+        nextBudget,
+      ] =
         await Promise.all([
           repos.debitAccounts.getAll(),
           repos.creditCards.getAll(),
           repos.transactions.getAll(),
+          repos.installmentPayments.getAll(),
           repos.categories.getAll(),
           repos.budgetSettings.get(),
         ]);
@@ -90,6 +116,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       setAccounts(nextAccounts);
       setCards(nextCards);
       setTransactions(nextTransactions);
+      setInstallmentPayments(nextInstallmentPayments);
       setCategories(nextCategories);
       setBudgetSettings(nextBudget);
       setIsHydrated(true);
@@ -220,6 +247,52 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
     [repos],
   );
 
+  const createInstallmentPayment = useCallback(
+    async (
+      data: Omit<InstallmentPayment, "id" | "createdAt">,
+    ): Promise<InstallmentPayment> => {
+      if (!repos) throw new Error("No active profile");
+      const installmentPayment = await repos.installmentPayments.create(data);
+      setInstallmentPayments((prev) =>
+        prev ? [...prev, installmentPayment] : [installmentPayment],
+      );
+      return installmentPayment;
+    },
+    [repos],
+  );
+
+  const updateInstallmentPayment = useCallback(
+    async (
+      id: string,
+      data: Partial<Omit<InstallmentPayment, "id" | "createdAt">>,
+    ): Promise<InstallmentPayment> => {
+      if (!repos) throw new Error("No active profile");
+      const installmentPayment = await repos.installmentPayments.update(id, data);
+      setInstallmentPayments((prev) =>
+        prev
+          ? prev.map((item) => (item.id === id ? installmentPayment : item))
+          : [installmentPayment],
+      );
+      return installmentPayment;
+    },
+    [repos],
+  );
+
+  const removeInstallmentPayment = useCallback(
+    async (id: string): Promise<void> => {
+      if (!repos) throw new Error("No active profile");
+      await repos.installmentPayments.delete(id);
+      setInstallmentPayments((prev) => (prev ? prev.filter((item) => item.id !== id) : []));
+    },
+    [repos],
+  );
+
+  const refreshInstallmentPayments = useCallback(async () => {
+    if (!repos) return;
+    const next = await repos.installmentPayments.getAll();
+    setInstallmentPayments(next);
+  }, [repos]);
+
   const createCategory = useCallback(
     async (data: Omit<Category, "id">): Promise<Category> => {
       if (!repos) throw new Error("No active profile");
@@ -266,6 +339,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       accounts,
       cards,
       transactions,
+      installmentPayments,
       categories,
       budgetSettings,
       isHydrated,
@@ -279,6 +353,10 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       createTransaction,
       updateTransaction,
       removeTransaction,
+      createInstallmentPayment,
+      updateInstallmentPayment,
+      removeInstallmentPayment,
+      refreshInstallmentPayments,
       createCategory,
       updateCategory,
       removeCategory,
@@ -288,6 +366,7 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       accounts,
       cards,
       transactions,
+      installmentPayments,
       categories,
       budgetSettings,
       isHydrated,
@@ -301,6 +380,10 @@ export function AppDataProvider({ children }: Readonly<{ children: React.ReactNo
       createTransaction,
       updateTransaction,
       removeTransaction,
+      createInstallmentPayment,
+      updateInstallmentPayment,
+      removeInstallmentPayment,
+      refreshInstallmentPayments,
       createCategory,
       updateCategory,
       removeCategory,

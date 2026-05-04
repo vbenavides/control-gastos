@@ -5,13 +5,20 @@ import { useParams, useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  Check,
+  CircleAlert,
   CircleCheck,
   ClipboardList,
+  ListFilter,
   Pencil,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
+import { formatShortDateEs, sortTransactionsDesc } from "@/lib/date";
+import { useInstallmentPayments } from "@/lib/hooks/use-installment-payments";
+import type { Transaction } from "@/lib/models";
+import { useCategories } from "@/lib/hooks/use-categories";
 import {
   formatMoneyInput,
   normalizeNumericBlurValue,
@@ -20,6 +27,8 @@ import {
   stripMoneyFormat,
 } from "@/lib/numeric-input";
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
+import { useTransactions } from "@/lib/hooks/use-transactions";
+import { getTransactionVisualMeta } from "@/lib/transaction-visuals";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +57,89 @@ function formatPaymentDate(day: number): string {
   return `${day} ${month} ${year}`;
 }
 
+// ─── CC running balance ───────────────────────────────────────────────────────
+
+/**
+ * Computes balance AFTER each transaction for a credit card.
+ * `sortedDesc` must be sorted newest-first.
+ * `currentBalance` is the card's current debt.
+ */
+function computeCCRunningBalances(
+  sortedDesc: Transaction[],
+  currentBalance: number,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  let bal = currentBalance;
+  for (const tx of sortedDesc) {
+    map.set(tx.id, bal);
+    // Going backward: undo this tx's effect
+    if (tx.kind === "cardPayment" || tx.kind === "cashback") {
+      // These decrease debt → going back, restore debt
+      bal += tx.amount;
+    } else {
+      // installments/expense/etc → increase debt → going back, remove it
+      bal -= tx.amount;
+    }
+  }
+  return map;
+}
+
+// ─── Installment helpers ──────────────────────────────────────────────────────
+
+/** Extract total payment count from installment note ("6 pagos de $..."). */
+function parseInstallmentTotal(note?: string): number {
+  if (!note) return 1;
+  const match = /^(\d+) pagos/.exec(note);
+  return match ? Math.max(1, parseInt(match[1]!, 10)) : 1;
+}
+
+// ─── Next payment due label ───────────────────────────────────────────────────
+
+function nextPaymentDueLabel(paymentDay: number): string {
+  const now = new Date();
+  let month = now.getMonth();
+  if (now.getDate() > paymentDay) {
+    month = (month + 1) % 12;
+  }
+  return `${paymentDay} ${MONTHS_SHORT[month]}`;
+}
+
+function parseIsoDate(value: string): Date {
+  const [y, m, d] = value.split("-").map((part) => parseInt(part, 10));
+  return new Date(y || 0, (m || 1) - 1, d || 1, 12, 0, 0, 0);
+}
+
+function clampDay(year: number, monthIndex: number, day: number): number {
+  return Math.min(day, new Date(year, monthIndex + 1, 0).getDate());
+}
+
+function getLastStatementCloseDate(statementDay: number, ref = new Date()): Date {
+  const currentMonthDate = new Date(
+    ref.getFullYear(),
+    ref.getMonth(),
+    clampDay(ref.getFullYear(), ref.getMonth(), statementDay),
+    12, 0, 0, 0,
+  );
+
+  if (ref >= currentMonthDate) return currentMonthDate;
+
+  const prevMonth = ref.getMonth() === 0 ? 11 : ref.getMonth() - 1;
+  const prevYear = ref.getMonth() === 0 ? ref.getFullYear() - 1 : ref.getFullYear();
+  return new Date(
+    prevYear,
+    prevMonth,
+    clampDay(prevYear, prevMonth, statementDay),
+    12, 0, 0, 0,
+  );
+}
+
+function getInstallmentMonthlyAmount(tx: Transaction): number {
+  const totalPayments = parseInstallmentTotal(tx.note);
+  return totalPayments > 0 ? tx.amount / totalPayments : tx.amount;
+}
+
+// ─── Usage helpers ────────────────────────────────────────────────────────────
+
 function usagePct(balance: number, limit: number): number {
   if (limit <= 0) return 0;
   return Math.min(100, Math.round((balance / limit) * 100));
@@ -73,6 +165,9 @@ export function CreditCardDetailScreen() {
   const cardId = typeof params.cardId === "string" ? params.cardId : "";
 
   const { cards, isLoading, update: updateCard } = useCreditCards();
+  const { categories } = useCategories();
+  const { transactions } = useTransactions();
+  const { installmentPayments } = useInstallmentPayments();
 
   const router = useRouter();
 
@@ -80,6 +175,89 @@ export function CreditCardDetailScreen() {
     () => (cards ?? []).find((c) => c.id === cardId) ?? null,
     [cards, cardId],
   );
+
+  // ── Transacciones de esta tarjeta ──
+  const cardTransactions = useMemo(
+    () => sortTransactionsDesc((transactions ?? []).filter((t) => t.accountId === cardId)),
+    [transactions, cardId],
+  );
+
+  const installmentTxs = useMemo(
+    () => cardTransactions.filter((t) => t.kind === "installments"),
+    [cardTransactions],
+  );
+
+  const linkedCardPayments = useMemo(
+    () => sortTransactionsDesc((transactions ?? []).filter((t) =>
+      t.kind === "cardPayment" && (
+        t.cardId === cardId ||
+        (!t.cardId && t.description === `Pago tarjeta ${card?.name ?? ""}`)
+      )
+    )),
+    [transactions, cardId, card?.name],
+  );
+
+  const installmentPaymentsByPurchaseId = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const payment of installmentPayments ?? []) {
+      if (!payment.isPaid) continue;
+      map.set(
+        payment.purchaseTransactionId,
+        (map.get(payment.purchaseTransactionId) ?? 0) + 1,
+      );
+    }
+
+    return map;
+  }, [installmentPayments]);
+
+  const recentTxs = useMemo(() => cardTransactions.slice(0, 5), [cardTransactions]);
+
+  const ccRunningBalances = useMemo(
+    () => computeCCRunningBalances(recentTxs, card?.balance ?? 0),
+    [recentTxs, card?.balance],
+  );
+
+  const statementSummary = useMemo(() => {
+    if (!card) {
+      return {
+        previousBalance: 0,
+        payments: 0,
+        purchases: 0,
+        installmentsDue: 0,
+        newBalance: 0,
+        interestFreePayment: 0,
+      };
+    }
+
+    const lastClose = getLastStatementCloseDate(card.statementDay);
+
+    const cycleCardTxs = cardTransactions.filter((tx) => parseIsoDate(tx.date) > lastClose);
+    const cycleLinkedPayments = linkedCardPayments.filter((tx) => parseIsoDate(tx.date) > lastClose);
+
+    const payments = cycleLinkedPayments.reduce((sum, tx) => sum + tx.amount, 0);
+    const purchases = cycleCardTxs
+      .filter((tx) => tx.kind === "expense")
+      .reduce((sum, tx) => sum + tx.amount, 0);
+
+    const installmentsDue = installmentTxs.reduce(
+      (sum, tx) => sum + getInstallmentMonthlyAmount(tx),
+      0,
+    );
+
+    const previousBalance = Math.max(card.balance + payments - purchases, 0);
+    const newBalance = card.balance;
+    const interestFreePayment = Math.max(newBalance - installmentsDue, 0);
+
+    return {
+      previousBalance,
+      payments,
+      purchases,
+      installmentsDue,
+      newBalance,
+      interestFreePayment,
+    };
+  }, [card, cardTransactions, installmentTxs, linkedCardPayments]);
 
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
@@ -151,7 +329,7 @@ export function CreditCardDetailScreen() {
     );
   }
 
-  const available = card.limit - card.balance;
+  const available = Math.max(card.limit - card.balance, 0);
   const pct = usagePct(card.balance, card.limit);
   const sameDay = card.statementDay === card.paymentDay;
 
@@ -272,17 +450,22 @@ export function CreditCardDetailScreen() {
               {/* Fila: Balance Anterior */}
               <div className="flex items-center justify-between px-4 py-2.5">
                 <p className="type-label text-[var(--text-secondary)]">Balance Anterior</p>
-                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(0)}</p>
+                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.previousBalance))}</p>
               </div>
               {/* Fila: Pagos */}
               <div className="flex items-center justify-between px-4 py-2.5">
                 <p className="type-label text-[var(--text-secondary)]">Pagos</p>
-                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(0)}</p>
+                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.payments))}</p>
               </div>
               {/* Fila: Compras */}
               <div className="flex items-center justify-between px-4 py-2.5">
                 <p className="type-label text-[var(--text-secondary)]">Compras</p>
-                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(0)}</p>
+                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.purchases))}</p>
+              </div>
+              {/* Fila: Pagos a Meses */}
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <p className="type-label text-[var(--text-secondary)]">Pagos a Meses</p>
+                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.installmentsDue))}</p>
               </div>
 
               {/* Separador grueso */}
@@ -291,12 +474,12 @@ export function CreditCardDetailScreen() {
               {/* Fila: Nuevo Balance */}
               <div className="flex items-center justify-between px-4 py-2.5">
                 <p className="type-label font-semibold text-[var(--text-primary)]">Nuevo Balance</p>
-                <p className="type-label font-semibold text-[var(--text-primary)]">{formatAmountCLP(card.balance)}</p>
+                <p className="type-label font-semibold text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.newBalance))}</p>
               </div>
               {/* Fila: Pago para no generar intereses */}
               <div className="flex items-center justify-between px-4 py-2.5">
                 <p className="type-label font-semibold text-[var(--text-primary)]">Pago para no generar intereses</p>
-                <p className="type-label font-semibold text-[var(--text-primary)]">{formatAmountCLP(card.balance)}</p>
+                <p className="type-label font-semibold text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.interestFreePayment))}</p>
               </div>
               {/* Fila: Fecha de Pago */}
               <div className="flex items-center justify-between px-4 py-2.5">
@@ -320,10 +503,24 @@ export function CreditCardDetailScreen() {
             </div>
 
             <div className="mt-2 flex items-center gap-2">
-              <CircleCheck size={16} strokeWidth={2.1} className="shrink-0 text-[#8de56c]" />
-              <p className="type-label text-[var(--text-secondary)]">
-                No tienes pagos pendientes para este periodo
-              </p>
+              {card.balance > 0 ? (
+                <>
+                  <AlertTriangle size={16} strokeWidth={2} className="shrink-0 text-[#f5c842]" />
+                  <p className="type-label text-[var(--text-secondary)]">
+                    Tienes un pago pendiente que vence el{" "}
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {nextPaymentDueLabel(card.paymentDay)}
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <CircleCheck size={16} strokeWidth={2.1} className="shrink-0 text-[#8de56c]" />
+                  <p className="type-label text-[var(--text-secondary)]">
+                    No tienes pagos pendientes para este periodo
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="mt-3 flex min-h-[4.5rem] items-center justify-center rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-5">
@@ -346,18 +543,88 @@ export function CreditCardDetailScreen() {
               </button>
             </div>
 
-            <div className="mt-3 overflow-hidden rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-6 text-center">
-              <p className="type-label text-[var(--text-secondary)]">
-                Registra tus compras a meses y da seguimiento a tus pagos
-              </p>
-              <button
-                type="button"
-                onClick={() => router.push(`/agregar/compra-a-meses?cardId=${card.id}`)}
-                className="mx-auto mt-4 inline-flex min-h-[2.2rem] items-center justify-center rounded-full bg-[#0f2a39] px-5 text-[0.9rem] font-medium text-[var(--accent)]"
-              >
-                Agregar Compra a Meses
-              </button>
-            </div>
+            {installmentTxs.length === 0 ? (
+              <div className="mt-3 overflow-hidden rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-6 text-center">
+                <p className="type-label text-[var(--text-secondary)]">
+                  Registra tus compras a meses y da seguimiento a tus pagos
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/agregar/compra-a-meses?cardId=${card.id}`)}
+                  className="mx-auto mt-4 inline-flex min-h-[2.2rem] items-center justify-center rounded-full bg-[#0f2a39] px-5 text-[0.9rem] font-medium text-[var(--accent)]"
+                >
+                  Agregar Compra a Meses
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 overflow-hidden rounded-[0.85rem] border border-white/[0.07] bg-[#17212b]">
+                {installmentTxs.map((tx, idx) => {
+                  const totalPayments = parseInstallmentTotal(tx.note);
+                  const paid = installmentPaymentsByPurchaseId.get(tx.id) ?? 0;
+                  const pct = totalPayments > 0 ? Math.round((paid / totalPayments) * 100) : 0;
+                  const isFullyPaid = paid >= totalPayments;
+                  const scheduledAmount = totalPayments > 0 ? Math.round(tx.amount / totalPayments) : 0;
+                  const remainingAmount = Math.max(0, tx.amount - paid * scheduledAmount);
+                  const visual = getTransactionVisualMeta(tx, categories);
+                  const Icon = visual.Icon;
+                  return (
+                    <button
+                      type="button"
+                      key={tx.id}
+                      onClick={() => router.push(`/cuentas/tarjeta/${card.id}/compras-a-meses/${tx.id}`)}
+                      className={
+                        idx > 0
+                          ? "w-full border-t border-white/[0.07] px-4 py-3.5 text-left transition hover:bg-white/[0.03]"
+                          : "w-full px-4 py-3.5 text-left transition hover:bg-white/[0.03]"
+                      }
+                    >
+                      {/* Row 1: icon + description | amount + bar */}
+                      <div className="flex items-start gap-3">
+                        {/* Left: icon + description */}
+                        <div
+                          className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full"
+                          style={{ backgroundColor: visual.backgroundColor, color: visual.color }}
+                        >
+                          <Icon size={15} strokeWidth={2.2} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="type-label font-medium text-[var(--text-primary)] truncate">
+                            {tx.description}
+                          </p>
+                          <p className="type-helper mt-0.5 text-[var(--text-secondary)]">
+                            Pagado {paid} de {totalPayments} pagos
+                          </p>
+                        </div>
+                        {/* Right: amount + bar */}
+                        <div className="shrink-0 flex flex-col items-end gap-1.5">
+                          <p className="type-label font-medium text-[var(--text-primary)]">
+                            {formatAmountCLP(remainingAmount)}
+                          </p>
+                          <div className="w-20 h-[3px] overflow-hidden rounded-full bg-white/[0.1]">
+                            <div
+                              className="h-full rounded-full bg-[var(--accent)] transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 2: warning */}
+                      <div className="mt-1.5 flex items-center gap-1.5 pl-11">
+                      {isFullyPaid ? (
+                          <CircleCheck size={12} strokeWidth={2} className="shrink-0 text-[#8de56c]" />
+                        ) : (
+                          <CircleAlert size={12} strokeWidth={2} className="shrink-0 text-[#f55a3d]" />
+                        )}
+                        <p className="type-helper text-[var(--text-secondary)]">
+                          {isFullyPaid ? "Pagos registrados" : "Faltan pagos programados"}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* Uso de Crédito */}
@@ -395,12 +662,101 @@ export function CreditCardDetailScreen() {
               Transacciones recientes
             </h2>
 
-            <div className="mt-4 flex flex-col items-center justify-center rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-12">
-              <div className="grid h-16 w-16 place-items-center rounded-full bg-[#1e3040]">
-                <ClipboardList size={28} strokeWidth={1.7} className="text-[var(--text-secondary)]" />
+            {recentTxs.length === 0 ? (
+              <div className="mt-4 flex flex-col items-center justify-center rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-12">
+                <div className="grid h-16 w-16 place-items-center rounded-full bg-[#1e3040]">
+                  <ClipboardList size={28} strokeWidth={1.7} className="text-[var(--text-secondary)]" />
+                </div>
+                <p className="type-label mt-4 text-[var(--text-secondary)]">Sin entradas aún</p>
               </div>
-              <p className="type-label mt-4 text-[var(--text-secondary)]">Sin entradas aún</p>
-            </div>
+            ) : (
+              <>
+                <div className="mt-3 overflow-hidden rounded-[0.85rem] border border-white/[0.07] bg-[#17212b]">
+                  {/* Group by date */}
+                  {(() => {
+                    const groups: { date: string; txs: typeof recentTxs }[] = [];
+                    for (const tx of recentTxs) {
+                      const dateKey = tx.date.split("T")[0] ?? tx.date;
+                      const last = groups[groups.length - 1];
+                      if (last && last.date === dateKey) {
+                        last.txs.push(tx);
+                      } else {
+                        groups.push({ date: dateKey, txs: [tx] });
+                      }
+                    }
+                    return groups.map((group) => (
+                      <div key={group.date}>
+                        {/* Date header */}
+                        <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2">
+                          <p className="type-helper text-[var(--text-secondary)]">
+                            {formatShortDateEs(group.date)}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <ListFilter size={14} strokeWidth={2} className="text-[var(--text-secondary)]" />
+                            <Check size={14} strokeWidth={2.2} className="text-[var(--text-secondary)]" />
+                          </div>
+                        </div>
+                        {/* Rows */}
+                        {group.txs.map((tx, idx) => {
+                          const balAfter = ccRunningBalances.get(tx.id);
+                          const visual = getTransactionVisualMeta(tx, categories);
+                          const Icon = visual.Icon;
+                          return (
+                            <Link
+                              key={tx.id}
+                              href={`/cuentas/tarjeta/${card.id}/transaccion/${tx.id}`}
+                              prefetch={false}
+                              className={
+                                idx > 0
+                                  ? "flex items-center gap-3 border-t border-white/[0.05] px-4 py-3 transition hover:bg-white/[0.03]"
+                                  : "flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]"
+                              }
+                            >
+                              {/* Icon */}
+                        <div
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-full"
+                          style={{ backgroundColor: visual.backgroundColor, color: visual.color }}
+                        >
+                          <Icon size={15} strokeWidth={2.2} />
+                        </div>
+                              {/* Description */}
+                              <div className="min-w-0 flex-1">
+                                <p className="type-label font-medium text-[var(--text-primary)] truncate">
+                                  {tx.description}
+                                </p>
+                                <p className="type-helper mt-0.5 text-[var(--text-secondary)] truncate">
+                                  {card.name}
+                                </p>
+                              </div>
+                              {/* Amount + balance */}
+                              <div className="shrink-0 text-right">
+                                <p className="type-label font-medium text-[var(--text-primary)]">
+                                  {formatAmountCLP(tx.amount)}
+                                </p>
+                                {balAfter !== undefined && (
+                                  <p className="type-helper mt-0.5 text-[var(--text-secondary)]">
+                                    {formatAmountCLP(balAfter)}
+                                  </p>
+                                )}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                {/* Ver todas — botón separado */}
+                <button
+                  type="button"
+                  onClick={() => router.push(`/cuentas/tarjeta/${card.id}/estado-de-cuenta`)}
+                  className="mt-3 w-full rounded-[0.85rem] bg-[#0f2a39] py-3 text-center type-label font-medium text-[var(--accent)]"
+                >
+                  Ver todas las transacciones
+                </button>
+              </>
+            )}
           </section>
 
         </div>

@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlignJustify, CreditCard, Info, Layers, Navigation, SquarePen } from "lucide-react";
+import { AlignJustify, CreditCard, Info, Navigation, SquarePen } from "lucide-react";
 
 import { useCreditCards } from "@/lib/hooks/use-credit-cards";
+import { resolveIcon } from "@/lib/category-icons";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useTransactions } from "@/lib/hooks/use-transactions";
 import { useFormDraft } from "@/lib/hooks/use-form-draft";
@@ -116,6 +117,7 @@ export function AddInstallmentsScreen() {
   const [payLaterDate, setPayLaterDate] = useState(draft?.payLaterDate ?? todayISO);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [isMonthlyFocused, setIsMonthlyFocused] = useState(false);
 
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
@@ -136,6 +138,8 @@ export function AddInstallmentsScreen() {
 
   const categoryName =
     (categories ?? []).find((c) => c.id === categoryId)?.name ?? "";
+  const selectedCategory = (categories ?? []).find((c) => c.id === categoryId) ?? null;
+  const CategoryIcon = resolveIcon(selectedCategory?.iconKey, 12);
   const card = (cards ?? []).find((c) => c.id === cardId) ?? null;
   const cardName = card?.name ?? "";
 
@@ -146,7 +150,7 @@ export function AddInstallmentsScreen() {
   const syncMonthlyFromAmount = (rawAmount: string, rawPayments: string) => {
     const n = parseNumericInput(rawAmount);
     const p = Math.max(1, parseInt(rawPayments || "1", 10));
-    setMonthlyStr(n ? String(Math.ceil(n / p)) : "0");
+    setMonthlyStr(n ? (n / p).toFixed(2) : "0");
   };
 
   const handleAmountChange = (v: string) => {
@@ -168,21 +172,29 @@ export function AddInstallmentsScreen() {
   };
 
   const handleMonthlyChange = (v: string) => {
-    const sanitized = sanitizeNumericInput(v, "integer");
+    // Strip CLP thousand separators and normalize decimal separator
+    const stripped = v.replace(/\./g, "").replace(",", ".");
+    const sanitized = stripped.replace(/[^0-9.]/g, "");
     setMonthlyStr(sanitized);
-    // Recalcula el monto total: monthly × pagos
-    const m = parseNumericInput(sanitized);
-    setAmount(m ? String(m * paymentCount) : "0");
+    const m = parseFloat(sanitized) || 0;
+    setAmount(m ? String(Math.round(m * paymentCount)) : "0");
   };
 
   const handleMonthlyBlur = () => {
-    const norm = normalizeNumericBlurValue(monthlyStr, "integer");
-    setMonthlyStr(norm);
-    const m = parseNumericInput(norm);
-    setAmount(m ? String(m * paymentCount) : "0");
+    setIsMonthlyFocused(false);
+    const n = parseFloat(monthlyStr) || 0;
+    setMonthlyStr(n ? n.toFixed(2) : "0");
+    setAmount(n ? String(Math.round(n * paymentCount)) : "0");
   };
 
-  const numericMonthly = parseNumericInput(monthlyStr);
+  const numericMonthly = parseFloat(monthlyStr) || 0;
+
+  // Formatted display value (thousand separators + 2 decimals, CLP locale)
+  const monthlyDisplayValue = isMonthlyFocused
+    ? (monthlyStr === "0" ? "" : monthlyStr)
+    : numericMonthly
+      ? numericMonthly.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : "";
 
   // Info de facturación calculada dinámicamente
   const billingInfo = useMemo(() => {
@@ -214,7 +226,7 @@ export function AddInstallmentsScreen() {
         iconBackground: meta.iconBackground,
         iconColor: meta.iconColor,
         note: [
-          `${paymentCount} pagos de $${numericMonthly.toLocaleString("es-CL")}`,
+          `${paymentCount} pagos de $${numericMonthly.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           buyNowPayLater ? "Compra ahora, paga después" : "",
         ].filter(Boolean).join(" · "),
         statusLabel: meta.statusLabel,
@@ -251,7 +263,7 @@ export function AddInstallmentsScreen() {
             />
             <FormPickerField
               label="Categoría"
-              icon={<Layers size={16} />}
+              icon={<CategoryIcon size={16} />}
               value={categoryName}
               placeholder="Selecciona categoría"
               onClick={() => setShowCategoryPicker(true)}
@@ -289,16 +301,17 @@ export function AddInstallmentsScreen() {
                   <div className="flex items-center gap-2">
                     <span className="shrink-0 text-white/55"><AlignJustify size={16} /></span>
                     <span className="type-body font-medium text-[var(--text-primary)]">$</span>
-                    <input
+                     <input
                       id="monthly"
                       name="monthly"
                       type="text"
-                      inputMode="numeric"
-                      value={monthlyStr === "0" ? "" : monthlyStr}
+                      inputMode="decimal"
+                      value={monthlyDisplayValue}
                       placeholder="0"
                       onChange={(e) => handleMonthlyChange(e.target.value)}
+                      onFocus={() => setIsMonthlyFocused(true)}
                       onBlur={handleMonthlyBlur}
-                      style={{ width: getNumericInputWidth(monthlyStr, 2) }}
+                      style={{ width: getNumericInputWidth(monthlyDisplayValue || "0", 2) }}
                       className="type-body min-w-[2ch] border-0 bg-transparent p-0 font-medium text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)]"
                     />
                   </div>
