@@ -97,6 +97,16 @@ export function CreditCardInstallmentPaymentScreen() {
   const selectedAccount = (accounts ?? []).find((account) => account.id === payFromAccountId) ?? null;
   const numericAmount = parseNumericInput(amount);
 
+  const isDirty = useMemo(() => {
+    if (!installmentPayment) return false;
+    return (
+      numericAmount !== installmentPayment.amount ||
+      payFromAccountId !== (installmentPayment.paidFromAccountId ?? "") ||
+      paymentDate !== (installmentPayment.paymentDate?.split("T")[0] ?? "") ||
+      notes !== (installmentPayment.note ?? "")
+    );
+  }, [installmentPayment, numericAmount, payFromAccountId, paymentDate, notes]);
+
   const today = new Date().toISOString().split("T")[0] ?? "";
   const isOverdue = paymentDate ? paymentDate < today : false;
 
@@ -274,9 +284,7 @@ export function CreditCardInstallmentPaymentScreen() {
 
       <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
         <FormScrollBody>
-          <div className={isPending ? "pointer-events-none" : ""}>
-            <AmountSection value={amount} onChange={(value) => { setAmount(value); setError(""); }} />
-          </div>
+          <AmountSection value={amount} onChange={(value) => { setAmount(value); setError(""); }} />
 
           {isPaid ? (
             <div className="mt-2 flex items-center justify-center gap-1.5 text-[#8de56c]">
@@ -339,7 +347,7 @@ export function CreditCardInstallmentPaymentScreen() {
             </div>
           </section>
 
-          <section className={`mt-4 ${isPending ? "pointer-events-none opacity-60" : ""}`}>
+          <section className="mt-4">
             <FormPickerField
               label="Tarjeta de crédito"
               icon={<CreditCard size={16} />}
@@ -372,7 +380,9 @@ export function CreditCardInstallmentPaymentScreen() {
           ) : null}
         </FormScrollBody>
 
-        {isPending ? (
+        {isPending && isDirty ? (
+          <SaveButton isSaving={isSaving} />
+        ) : isPending ? (
           <div className="shrink-0 px-0 pb-6 pt-4">
             <SwipeToPayButton onConfirm={handleSwipePay} isLoading={isPaying} />
           </div>

@@ -9,16 +9,19 @@ import {
   CircleAlert,
   CircleCheck,
   ClipboardList,
+  CreditCard,
   ListFilter,
   Pencil,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { DEFAULT_CURRENCY_CODE, formatAmountCLP } from "@/lib/currency";
+import { DEFAULT_CURRENCY_CODE, formatAmountCLP, formatSignedAmountCLP } from "@/lib/currency";
+import { buildCreditCardStatementSummary } from "@/lib/credit-card-statement";
 import { formatShortDateEs, sortTransactionsDesc } from "@/lib/date";
 import { useInstallmentPayments } from "@/lib/hooks/use-installment-payments";
 import type { Transaction } from "@/lib/models";
 import { useCategories } from "@/lib/hooks/use-categories";
+import { parseInstallmentTotal } from "@/lib/installments";
 import {
   formatMoneyInput,
   normalizeNumericBlurValue,
@@ -84,15 +87,6 @@ function computeCCRunningBalances(
   return map;
 }
 
-// ─── Installment helpers ──────────────────────────────────────────────────────
-
-/** Extract total payment count from installment note ("6 pagos de $..."). */
-function parseInstallmentTotal(note?: string): number {
-  if (!note) return 1;
-  const match = /^(\d+) pagos/.exec(note);
-  return match ? Math.max(1, parseInt(match[1]!, 10)) : 1;
-}
-
 // ─── Next payment due label ───────────────────────────────────────────────────
 
 function nextPaymentDueLabel(paymentDay: number): string {
@@ -102,40 +96,6 @@ function nextPaymentDueLabel(paymentDay: number): string {
     month = (month + 1) % 12;
   }
   return `${paymentDay} ${MONTHS_SHORT[month]}`;
-}
-
-function parseIsoDate(value: string): Date {
-  const [y, m, d] = value.split("-").map((part) => parseInt(part, 10));
-  return new Date(y || 0, (m || 1) - 1, d || 1, 12, 0, 0, 0);
-}
-
-function clampDay(year: number, monthIndex: number, day: number): number {
-  return Math.min(day, new Date(year, monthIndex + 1, 0).getDate());
-}
-
-function getLastStatementCloseDate(statementDay: number, ref = new Date()): Date {
-  const currentMonthDate = new Date(
-    ref.getFullYear(),
-    ref.getMonth(),
-    clampDay(ref.getFullYear(), ref.getMonth(), statementDay),
-    12, 0, 0, 0,
-  );
-
-  if (ref >= currentMonthDate) return currentMonthDate;
-
-  const prevMonth = ref.getMonth() === 0 ? 11 : ref.getMonth() - 1;
-  const prevYear = ref.getMonth() === 0 ? ref.getFullYear() - 1 : ref.getFullYear();
-  return new Date(
-    prevYear,
-    prevMonth,
-    clampDay(prevYear, prevMonth, statementDay),
-    12, 0, 0, 0,
-  );
-}
-
-function getInstallmentMonthlyAmount(tx: Transaction): number {
-  const totalPayments = parseInstallmentTotal(tx.note);
-  return totalPayments > 0 ? tx.amount / totalPayments : tx.amount;
 }
 
 // ─── Usage helpers ────────────────────────────────────────────────────────────
@@ -211,53 +171,38 @@ export function CreditCardDetailScreen() {
     return map;
   }, [installmentPayments]);
 
-  const recentTxs = useMemo(() => cardTransactions.slice(0, 5), [cardTransactions]);
+  // Counts ALL saved installment payments regardless of isPaid status.
+  // Used to detect if installments are "scheduled" even if not yet paid.
+  const savedInstallmentCountById = useMemo(() => {
+    const map = new Map<string, number>();
 
-  const ccRunningBalances = useMemo(
-    () => computeCCRunningBalances(recentTxs, card?.balance ?? 0),
-    [recentTxs, card?.balance],
-  );
-
-  const statementSummary = useMemo(() => {
-    if (!card) {
-      return {
-        previousBalance: 0,
-        payments: 0,
-        purchases: 0,
-        installmentsDue: 0,
-        newBalance: 0,
-        interestFreePayment: 0,
-      };
+    for (const payment of installmentPayments ?? []) {
+      map.set(
+        payment.purchaseTransactionId,
+        (map.get(payment.purchaseTransactionId) ?? 0) + 1,
+      );
     }
 
-    const lastClose = getLastStatementCloseDate(card.statementDay);
+    return map;
+  }, [installmentPayments]);
 
-    const cycleCardTxs = cardTransactions.filter((tx) => parseIsoDate(tx.date) > lastClose);
-    const cycleLinkedPayments = linkedCardPayments.filter((tx) => parseIsoDate(tx.date) > lastClose);
+  const recentTxs = useMemo(() => cardTransactions.slice(0, 5), [cardTransactions]);
 
-    const payments = cycleLinkedPayments.reduce((sum, tx) => sum + tx.amount, 0);
-    const purchases = cycleCardTxs
-      .filter((tx) => tx.kind === "expense")
-      .reduce((sum, tx) => sum + tx.amount, 0);
-
-    const installmentsDue = installmentTxs.reduce(
-      (sum, tx) => sum + getInstallmentMonthlyAmount(tx),
-      0,
+  const statementSummary = useMemo(() => {
+    return buildCreditCardStatementSummary(
+      card,
+      cardTransactions,
+      linkedCardPayments,
+      installmentPayments ?? [],
     );
+  }, [card, cardTransactions, linkedCardPayments, installmentPayments]);
 
-    const previousBalance = Math.max(card.balance + payments - purchases, 0);
-    const newBalance = card.balance;
-    const interestFreePayment = Math.max(newBalance - installmentsDue, 0);
+  const displayBalance = statementSummary.newBalance;
 
-    return {
-      previousBalance,
-      payments,
-      purchases,
-      installmentsDue,
-      newBalance,
-      interestFreePayment,
-    };
-  }, [card, cardTransactions, installmentTxs, linkedCardPayments]);
+  const ccRunningBalances = useMemo(
+    () => computeCCRunningBalances(recentTxs, displayBalance),
+    [recentTxs, displayBalance],
+  );
 
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
@@ -329,8 +274,8 @@ export function CreditCardDetailScreen() {
     );
   }
 
-  const available = Math.max(card.limit - card.balance, 0);
-  const pct = usagePct(card.balance, card.limit);
+  const available = Math.max(card.limit - displayBalance, 0);
+  const pct = usagePct(displayBalance, card.limit);
   const sameDay = card.statementDay === card.paymentDay;
 
   return (
@@ -386,7 +331,7 @@ export function CreditCardDetailScreen() {
           <section className="px-1 pt-8 text-center md:pt-10">
             <p className="type-label text-[var(--text-primary)]">Balance</p>
             <p className="type-display mt-1 font-medium text-[var(--text-primary)]">
-              {formatAmountCLP(card.balance)}
+              {formatAmountCLP(Math.round(displayBalance))}
             </p>
 
             <button
@@ -455,7 +400,7 @@ export function CreditCardDetailScreen() {
               {/* Fila: Pagos */}
               <div className="flex items-center justify-between px-4 py-2.5">
                 <p className="type-label text-[var(--text-secondary)]">Pagos</p>
-                <p className="type-label text-[var(--text-primary)]">{formatAmountCLP(Math.round(statementSummary.payments))}</p>
+                <p className="type-label text-[var(--text-primary)]">{formatSignedAmountCLP(-Math.round(statementSummary.payments))}</p>
               </div>
               {/* Fila: Compras */}
               <div className="flex items-center justify-between px-4 py-2.5">
@@ -503,7 +448,7 @@ export function CreditCardDetailScreen() {
             </div>
 
             <div className="mt-2 flex items-center gap-2">
-              {card.balance > 0 ? (
+              {displayBalance > 0 ? (
                 <>
                   <AlertTriangle size={16} strokeWidth={2} className="shrink-0 text-[#f5c842]" />
                   <p className="type-label text-[var(--text-secondary)]">
@@ -523,11 +468,43 @@ export function CreditCardDetailScreen() {
               )}
             </div>
 
-            <div className="mt-3 flex min-h-[4.5rem] items-center justify-center rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-5">
-              <p className="type-label text-center text-[var(--text-secondary)]">
-                No hay pagos programados en este periodo
-              </p>
-            </div>
+            {displayBalance > 0 ? (
+              <div className="mt-3 overflow-hidden rounded-[0.85rem] border border-white/[0.07] bg-[#17212b]">
+                <div className="border-b border-white/[0.07] px-4 py-2">
+                  <p className="type-helper text-[var(--text-secondary)]">
+                    {formatPaymentDate(card.paymentDay)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full"
+                    style={{ backgroundColor: "#0e1527", color: "#29bbf3" }}
+                  >
+                    <CreditCard size={15} strokeWidth={2.2} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="type-label font-medium text-[var(--text-primary)]">
+                      Pago de {card.name}
+                    </p>
+                    <p className="type-helper mt-0.5 text-[var(--text-secondary)]">{card.name}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="type-label font-medium text-[var(--text-primary)]">
+                      {formatAmountCLP(Math.round(statementSummary.installmentsDue) || Math.round(displayBalance))}
+                    </p>
+                    <p className="type-helper mt-0.5 text-[var(--text-secondary)]">
+                      {formatAmountCLP(Math.round(statementSummary.installmentsDue) || Math.round(displayBalance))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 flex min-h-[4.5rem] items-center justify-center rounded-[0.85rem] border border-white/[0.07] bg-[#17212b] px-4 py-5">
+                <p className="type-label text-center text-[var(--text-secondary)]">
+                  No hay pagos programados en este periodo
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Pagos a Meses */}
@@ -561,8 +538,10 @@ export function CreditCardDetailScreen() {
                 {installmentTxs.map((tx, idx) => {
                   const totalPayments = parseInstallmentTotal(tx.note);
                   const paid = installmentPaymentsByPurchaseId.get(tx.id) ?? 0;
+                  const savedCount = savedInstallmentCountById.get(tx.id) ?? 0;
                   const pct = totalPayments > 0 ? Math.round((paid / totalPayments) * 100) : 0;
                   const isFullyPaid = paid >= totalPayments;
+                  const allSaved = savedCount >= totalPayments;
                   const scheduledAmount = totalPayments > 0 ? Math.round(tx.amount / totalPayments) : 0;
                   const remainingAmount = Math.max(0, tx.amount - paid * scheduledAmount);
                   const visual = getTransactionVisualMeta(tx, categories);
@@ -609,17 +588,19 @@ export function CreditCardDetailScreen() {
                         </div>
                       </div>
 
-                      {/* Row 2: warning */}
-                      <div className="mt-1.5 flex items-center gap-1.5 pl-11">
-                      {isFullyPaid ? (
-                          <CircleCheck size={12} strokeWidth={2} className="shrink-0 text-[#8de56c]" />
-                        ) : (
-                          <CircleAlert size={12} strokeWidth={2} className="shrink-0 text-[#f55a3d]" />
-                        )}
-                        <p className="type-helper text-[var(--text-secondary)]">
-                          {isFullyPaid ? "Pagos registrados" : "Faltan pagos programados"}
-                        </p>
-                      </div>
+                      {/* Row 2: warning — only shown when fully paid or missing schedules */}
+                      {(isFullyPaid || !allSaved) && (
+                        <div className="mt-1.5 flex items-center gap-1.5 pl-11">
+                          {isFullyPaid ? (
+                            <CircleCheck size={12} strokeWidth={2} className="shrink-0 text-[#8de56c]" />
+                          ) : (
+                            <CircleAlert size={12} strokeWidth={2} className="shrink-0 text-[#f55a3d]" />
+                          )}
+                          <p className="type-helper text-[var(--text-secondary)]">
+                            {isFullyPaid ? "Pagos registrados" : "Faltan pagos programados"}
+                          </p>
+                        </div>
+                      )}
                     </button>
                   );
                 })}

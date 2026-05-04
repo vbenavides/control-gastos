@@ -73,7 +73,10 @@ export function CreditCardInstallmentDetailScreen() {
   const paidAmount = purchasePayments
     .filter((p) => p.isPaid)
     .reduce((sum, payment) => sum + payment.amount, 0);
-  const remainingAmount = Math.max((transaction?.amount ?? 0) - paidAmount, 0);
+  const remainingAmount = schedule.reduce((sum, item) => {
+    const payment = paymentByInstallment.get(item.installmentNumber);
+    return payment?.isPaid ? sum : sum + item.scheduledAmount;
+  }, 0);
 
   const noticeKey = searchParams.get("noticeAt")
     ?? `${searchParams.get("noticeAccount") ?? ""}|${searchParams.get("noticeBalance") ?? ""}`;
@@ -212,6 +215,7 @@ export function CreditCardInstallmentDetailScreen() {
           <div className="mt-4 space-y-4">
             {schedule.map((item) => {
               const payment = paymentByInstallment.get(item.installmentNumber);
+              const isOverdue = item.dueDate < new Date().toISOString().split("T")[0];
 
               return (
                 <button
@@ -224,10 +228,10 @@ export function CreditCardInstallmentDetailScreen() {
                     <span className="type-helper">{item.dueLabel}</span>
                     {payment?.isPaid ? (
                       <Check size={14} strokeWidth={2.2} className="text-[#dce8f1]" />
-                    ) : payment ? (
-                      <Clock size={14} strokeWidth={2.1} className="text-[#f5a43d]" />
-                    ) : (
+                    ) : !payment || isOverdue ? (
                       <CircleAlert size={14} strokeWidth={2.1} className="text-[#f55a3d]" />
+                    ) : (
+                      <Clock size={14} strokeWidth={2.1} className="text-[#f5a43d]" />
                     )}
                   </div>
 

@@ -26,6 +26,7 @@ import { sortTransactionsDesc } from "@/lib/date";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useDebitAccounts } from "@/lib/hooks/use-debit-accounts";
 import { useTransactions } from "@/lib/hooks/use-transactions";
+import { computeRunningBalances } from "@/lib/transactions";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -97,6 +98,24 @@ export function HistoryScreen() {
 
     return sortTransactionsDesc(list);
   }, [transactions, applied, searchQuery]);
+
+  const runningBalanceMap = useMemo(() => {
+    const map = new Map<string, number>();
+
+    for (const account of accounts ?? []) {
+      const accountTransactions = sortTransactionsDesc(
+        (transactions ?? []).filter((transaction) => transaction.accountId === account.id),
+      );
+
+      const accountRunningBalances = computeRunningBalances(accountTransactions, account.balance);
+
+      accountRunningBalances.forEach((balance, transactionId) => {
+        map.set(transactionId, balance);
+      });
+    }
+
+    return map;
+  }, [accounts, transactions]);
 
   // ── Sheet open ──
   const openSheet = useCallback(() => {
@@ -264,6 +283,7 @@ export function HistoryScreen() {
               transaction={transaction}
               accountSlug={transaction.accountId}
               accountName={accountMap.get(transaction.accountId)}
+              runningBalance={runningBalanceMap.get(transaction.id)}
             />
           ))}
         </div>

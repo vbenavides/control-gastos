@@ -9,3 +9,8 @@ export function parseAmountCLP(s: string): number {
 export function formatAmountCLP(n: number): string {
   return "$" + n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
+
+export function formatSignedAmountCLP(n: number): string {
+  const absolute = formatAmountCLP(Math.abs(n));
+  return n < 0 ? `-${absolute}` : absolute;
+}

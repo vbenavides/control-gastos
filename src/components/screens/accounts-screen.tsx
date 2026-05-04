@@ -322,6 +322,7 @@ function CreditCardsPanel({
       {cards.map((card) => {
         const available = Math.max(0, card.limit - card.balance);
         const status = getPaymentStatus(card, today);
+        const usageRatio = card.limit > 0 ? card.balance / card.limit : 0;
 
         return (
           <Link
@@ -349,7 +350,20 @@ function CreditCardsPanel({
 
               <div className="text-right">
                 <p className="type-label text-white/72">Disponible</p>
-                <div className="ml-auto mt-1 h-1 w-[6.5rem] rounded-full bg-[#2d4e3b]" />
+                <div className="ml-auto mt-1 h-1 w-[6.5rem] rounded-full bg-[#2d4e3b]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, usageRatio * 100)}%`,
+                      backgroundColor:
+                        usageRatio > 0.8
+                          ? "#ef4444"
+                          : usageRatio > 0.5
+                            ? "#f5a623"
+                            : "#8de56c",
+                    }}
+                  />
+                </div>
                 <p className="type-body mt-1 font-medium text-[var(--text-primary)]">
                   {formatAmountCLP(available)}
                 </p>
